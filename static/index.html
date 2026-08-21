@@ -697,23 +697,24 @@
     }
 
     #interrupt-btn {
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
-      width: 36px;
-      height: 36px;
-      border: 1px solid rgba(248,81,73,0.3);
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(248,81,73,0.4);
       border-radius: var(--radius-sm);
-      background: rgba(248,81,73,0.1);
+      background: rgba(248,81,73,0.15);
       color: var(--accent-err);
       cursor: pointer;
       transition: var(--transition);
-      font-size: 14px;
+      font-size: 13px;
       flex-shrink: 0;
     }
-    #interrupt-btn:hover { background: rgba(248,81,73,0.2); border-color: var(--accent-err); }
+    #interrupt-btn.visible { display: flex; }
+    #interrupt-btn:hover { background: rgba(248,81,73,0.25); border-color: var(--accent-err); }
 
-    /* ── Claude Code Bottom Status Bar (Mode, Effort, Model, Usage) ───── */
+    /* ── Claude Code Bottom Status Bar ───────────────────────────────── */
     .prompt-toolbar {
       display: flex;
       align-items: center;
@@ -881,8 +882,9 @@
     #scroll-btn {
       position: absolute;
       bottom: 12px;
-      right: 16px;
-      padding: 7px 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 7px 16px;
       border-radius: 20px;
       background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
       border: 1.5px solid rgba(255,255,255,0.4);
@@ -902,12 +904,12 @@
     }
     #scroll-btn.visible { display: flex; }
     #scroll-btn:hover {
-      transform: translateY(-2px);
+      transform: translateX(-50%) translateY(-2px);
       box-shadow: 0 6px 22px rgba(0,0,0,0.7), 0 0 18px rgba(88,166,255,0.7);
       filter: brightness(1.2);
     }
     #scroll-btn:active {
-      transform: translateY(0);
+      transform: translateX(-50%) translateY(0);
     }
 
     /* ── Responsive Mobile First Adjustments ────────────────────────────────── */
@@ -1386,9 +1388,8 @@
               spellcheck="true"
             ></textarea>
             <div class="input-actions">
-              <input type="file" id="file-input" accept="image/*" multiple />
-              <button id="upload-btn" title="Attach image">🖼</button>
-              <button id="interrupt-btn" title="Send Ctrl+C (interrupt)">⏹</button>
+              <input type="file" id="file-input" accept="image/*" multiple style="display:none" />
+              <button id="interrupt-btn" title="Stop AGY (Ctrl+C)">⏹</button>
               <button id="send-btn">↵</button>
             </div>
           </div>
@@ -1406,17 +1407,7 @@
                 </select>
               </div>
 
-              <!-- Extra action plus -->
-              <div class="toolbar-item" id="toolbar-new-chat-btn" title="New Session">＋</div>
-
-              <!-- Workspace folder indicator -->
-              <div class="toolbar-item" title="Active Workspace">
-                <span>📁</span> <span id="toolbar-workspace-label" style="font-family:var(--font-mono);font-size:11px">~</span>
-              </div>
-            </div>
-
-            <div class="prompt-toolbar-right">
-              <!-- Model selector -->
+              <!-- Model selector (on left) -->
               <div class="toolbar-item toolbar-select-wrapper" title="Active Model">
                 <span id="toolbar-model-label">Auto Model</span>
                 <select id="toolbar-model-select">
@@ -1433,11 +1424,11 @@
                   <option value="low">Low</option>
                 </select>
               </div>
+            </div>
 
-              <!-- Usage Wheel / Ring Meter -->
-              <div class="usage-ring-container" id="toolbar-usage-container" title="API / Subscription usage remaining: ~92%">
-                <div class="usage-ring" id="toolbar-usage-ring"></div>
-              </div>
+            <div class="prompt-toolbar-right">
+              <!-- Extra action plus moved to far right -->
+              <div class="toolbar-item" id="toolbar-new-chat-btn" title="New Session">＋</div>
             </div>
           </div>
         </div>
@@ -1713,6 +1704,9 @@
   function setThinking(val) {
     isThinking = val;
     thinkingEl.classList.toggle('visible', val);
+    if (interruptBtn) {
+      interruptBtn.classList.toggle('visible', val);
+    }
   }
 
   function scrollToBottom(force = false) {
