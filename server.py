@@ -8,7 +8,9 @@ instead of fragile PTY scraping.
 
 import asyncio
 import json
+import mimetypes
 import os
+import secrets
 import subprocess
 import time
 import uuid
@@ -17,7 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 import aiofiles
-from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -37,6 +39,11 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 SESSIONS_DIR = Path(__file__).parent / "sessions_data"
 SESSIONS_DIR.mkdir(exist_ok=True)
+
+ARTIFACTS_DIR = Path(__file__).parent / "hosted_artifacts"
+ARTIFACTS_DIR.mkdir(exist_ok=True)
+
+BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 
 ARCHIVE_STORE = Path(__file__).parent / "archived_conversations.json"
 
@@ -66,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0002")
+app = FastAPI(title="AGY Relay", version="v202608.0003")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -882,6 +889,113 @@ async def get_apple_icon():
 @app.get("/favicon.ico")
 async def get_favicon():
     return FileResponse(Path(__file__).parent / "static" / "icon-192.png", media_type="image/png")
+
+
+# ---------------------------------------------------------------------------
+# Hosted Mockups & Artifacts (/artifact/<id>)
+# ---------------------------------------------------------------------------
+
+@app.get("/artifact/{artifact_id}")
+@app.get("/artifact/{artifact_id}/{subpath:path}")
+async def serve_artifact(artifact_id: str, subpath: str = ""):
+    safe_id = Path(artifact_id).name
+
+    # 1. Look in hosted_artifacts directory
+    target_dir = ARTIFACTS_DIR / safe_id
+    if target_dir.exists() and target_dir.is_dir():
+        if subpath:
+            file_path = (target_dir / subpath).resolve()
+            if str(file_path).startswith(str(target_dir.resolve())) and file_path.is_file():
+                mime, _ = mimetypes.guess_type(str(file_path))
+                return FileResponse(file_path, media_type=mime or "application/octet-stream")
+        else:
+            for candidate_name in ("index.html", "mockup.html", "app.html"):
+                idx = target_dir / candidate_name
+                if idx.is_file():
+                    return FileResponse(idx, media_type="text/html; charset=utf-8")
+            for f in target_dir.iterdir():
+                if f.is_file():
+                    mime, _ = mimetypes.guess_type(str(f))
+                    return FileResponse(f, media_type=mime or "text/html; charset=utf-8")
+
+    # Check standalone single file in hosted_artifacts (e.g. hosted_artifacts/abc123.html)
+    for ext in ("", ".html", ".htm", ".png", ".jpg", ".svg", ".json", ".txt"):
+        candidate = ARTIFACTS_DIR / f"{safe_id}{ext}"
+        if candidate.is_file():
+            mime, _ = mimetypes.guess_type(str(candidate))
+            return FileResponse(candidate, media_type=mime or "text/html; charset=utf-8")
+
+    # 2. Look in brain directory (~/.gemini/antigravity-cli/brain)
+    if BRAIN_DIR.exists():
+        matched = list(BRAIN_DIR.glob(f"*/{safe_id}*")) + list(BRAIN_DIR.glob(f"*/*/{safe_id}*"))
+        for mf in matched:
+            if mf.is_file():
+                mime, _ = mimetypes.guess_type(str(mf))
+                return FileResponse(mf, media_type=mime or "text/html; charset=utf-8")
+            elif mf.is_dir():
+                idx = mf / "index.html"
+                if idx.is_file():
+                    return FileResponse(idx, media_type="text/html; charset=utf-8")
+
+    raise HTTPException(status_code=404, detail=f"Artifact '{safe_id}' not found")
+
+
+@app.post("/api/artifacts")
+async def create_artifact(request: Request):
+    """Publish / host a new mockup HTML or file"""
+    content_type = request.headers.get("content-type", "")
+    artifact_id = secrets.token_hex(4)
+
+    if "application/json" in content_type:
+        body = await request.json()
+        custom_id = body.get("id")
+        if custom_id:
+            artifact_id = Path(str(custom_id)).name
+        html_content = body.get("content") or body.get("html") or ""
+        filename = body.get("filename", "index.html")
+    else:
+        raw_body = await request.body()
+        html_content = raw_body.decode("utf-8", errors="replace")
+        filename = "index.html"
+
+    artifact_folder = ARTIFACTS_DIR / artifact_id
+    artifact_folder.mkdir(exist_ok=True)
+    target_file = artifact_folder / filename
+    target_file.write_text(html_content, encoding="utf-8")
+
+    return {
+        "status": "ok",
+        "artifact_id": artifact_id,
+        "filename": filename,
+        "url": f"/artifact/{artifact_id}",
+        "full_url": f"http://{HOST}:{PORT}/artifact/{artifact_id}",
+    }
+
+
+@app.get("/api/artifacts")
+async def list_artifacts():
+    """List all currently hosted artifacts & mockups"""
+    items = []
+    if ARTIFACTS_DIR.exists():
+        for path in ARTIFACTS_DIR.iterdir():
+            if path.is_dir():
+                files = [f.name for f in path.iterdir() if f.is_file()]
+                items.append({
+                    "id": path.name,
+                    "type": "directory",
+                    "files": files,
+                    "url": f"/artifact/{path.name}",
+                    "created_at": path.stat().st_mtime,
+                })
+            elif path.is_file():
+                items.append({
+                    "id": path.stem,
+                    "filename": path.name,
+                    "type": "file",
+                    "url": f"/artifact/{path.name}",
+                    "created_at": path.stat().st_mtime,
+                })
+    return {"artifacts": sorted(items, key=lambda x: x.get("created_at", 0), reverse=True)}
 
 
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")

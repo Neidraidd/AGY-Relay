@@ -799,6 +799,57 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
+      position: relative;
+    }
+
+    /* ── Slash Commands Autocomplete Menu ────────────────────────────── */
+    #slash-menu {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 0;
+      width: 100%;
+      max-height: 240px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+      z-index: 120;
+      backdrop-filter: blur(16px);
+      padding: 4px;
+    }
+    #slash-menu.visible { display: flex; }
+    .slash-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: background 0.12s ease;
+    }
+    .slash-item:hover, .slash-item.selected {
+      background: var(--bg3);
+    }
+    .slash-cmd {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(249,115,22,0.12);
+      border: 1px solid rgba(249,115,22,0.25);
+      padding: 2px 7px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .slash-desc {
+      font-size: 12px;
+      color: var(--text-2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     #input-form {
@@ -1489,7 +1540,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0002</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0003</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -1514,6 +1565,7 @@
       <!-- Input area (fixed at bottom of chat container) -->
       <div id="input-area">
         <div class="input-inner">
+          <div id="slash-menu"></div>
           <!-- Image previews strip -->
           <div id="image-previews"></div>
           <div id="input-form">
@@ -2665,16 +2717,113 @@
     setThinking(true);
   }
 
-  // ── Auto-resize textarea ───────────────────────────────────────────────
+  // ── CLI Standard Slash Commands ─────────────────────────────────────────
+  const CLI_SLASH_COMMANDS = [
+    { cmd: '/goal', desc: 'Autonomous execution until objective is fully achieved' },
+    { cmd: '/plan', desc: 'Step-by-step interactive architecture planning breakdown' },
+    { cmd: '/schedule', desc: 'Schedule a one-shot timer or recurring cron job' },
+    { cmd: '/grill-me', desc: 'Interactive interview to align on design decisions' },
+    { cmd: '/teamwork-preview', desc: 'Spawn coordinated autonomous subagent teams' },
+    { cmd: '/learn', desc: 'Persist custom rules or behavior patterns into memory' },
+    { cmd: '/clear', desc: 'Clear current conversation history and state' },
+    { cmd: '/resume', desc: 'Search and resume a past conversation' },
+  ];
+
+  const slashMenu = document.getElementById('slash-menu');
+  let selectedSlashIndex = 0;
+  let currentSlashMatches = [];
+
+  function updateSlashMenu() {
+    if (!slashMenu) return;
+    const val = inputEl.value;
+    if (val.startsWith('/') && !val.includes(' ')) {
+      const q = val.toLowerCase();
+      currentSlashMatches = CLI_SLASH_COMMANDS.filter(c => c.cmd.toLowerCase().startsWith(q));
+      if (currentSlashMatches.length > 0) {
+        selectedSlashIndex = Math.min(selectedSlashIndex, currentSlashMatches.length - 1);
+        if (selectedSlashIndex < 0) selectedSlashIndex = 0;
+        renderSlashMenu();
+        slashMenu.classList.add('visible');
+        return;
+      }
+    }
+    slashMenu.classList.remove('visible');
+    currentSlashMatches = [];
+  }
+
+  function renderSlashMenu() {
+    if (!slashMenu) return;
+    slashMenu.innerHTML = '';
+    currentSlashMatches.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.className = `slash-item${idx === selectedSlashIndex ? ' selected' : ''}`;
+      row.innerHTML = `<span class="slash-cmd">${item.cmd}</span><span class="slash-desc">${item.desc}</span>`;
+      row.addEventListener('click', () => {
+        applySlashCommand(item.cmd);
+      });
+      slashMenu.appendChild(row);
+    });
+  }
+
+  function applySlashCommand(cmd) {
+    if (cmd === '/clear') {
+      inputEl.value = '';
+      if (slashMenu) slashMenu.classList.remove('visible');
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'clear' }));
+        messagesEl.innerHTML = '';
+        emptyState.style.display = 'flex';
+      }
+      return;
+    }
+    inputEl.value = cmd + ' ';
+    inputEl.focus();
+    inputEl.style.height = 'auto';
+    if (slashMenu) slashMenu.classList.remove('visible');
+  }
+
+  // ── Auto-resize textarea & Slash menu ──────────────────────────────────
   inputEl.addEventListener('input', () => {
     inputEl.style.height = 'auto';
     inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
+    updateSlashMenu();
   });
 
   inputEl.addEventListener('keydown', e => {
+    if (slashMenu && slashMenu.classList.contains('visible') && currentSlashMatches.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedSlashIndex = (selectedSlashIndex + 1) % currentSlashMatches.length;
+        renderSlashMenu();
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedSlashIndex = (selectedSlashIndex - 1 + currentSlashMatches.length) % currentSlashMatches.length;
+        renderSlashMenu();
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        applySlashCommand(currentSlashMatches[selectedSlashIndex].cmd);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        slashMenu.classList.remove('visible');
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if (slashMenu && !slashMenu.contains(e.target) && e.target !== inputEl) {
+      slashMenu.classList.remove('visible');
     }
   });
 
