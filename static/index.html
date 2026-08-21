@@ -694,7 +694,7 @@
       width: 100%;
       z-index: 50;
       position: relative;
-      border-top: 1px solid rgba(255,255,255,0.05);
+      border-top: none;
     }
 
     .input-inner {
@@ -1420,11 +1420,6 @@
         <div class="input-inner">
           <!-- Image previews strip -->
           <div id="image-previews"></div>
-          <div id="workspace-label">
-            <span>Workspace:</span><code id="workspace-path">—</code>
-            <span style="margin-left:auto;color:var(--text-3)" id="session-id-label"></span>
-          </div>
-          <div style="height:6px"></div>
           <div id="input-form">
             <textarea
               id="message-input"
@@ -2367,8 +2362,8 @@
     setThinking(false);
 
     setStatus('connecting', 'Connecting…');
-    workspacePath.textContent = sessions[sessionId]?.workspace || '…';
-    sessionIdLabel.textContent = `#${sessionId}`;
+    if (workspacePath) workspacePath.textContent = sessions[sessionId]?.workspace || '…';
+    if (sessionIdLabel) sessionIdLabel.textContent = `#${sessionId}`;
 
     // Sync model selector & toolbar to this session's model
     const sessionModel = sessions[sessionId]?.model;
