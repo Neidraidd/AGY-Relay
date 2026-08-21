@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>AGY Relay</title>
+  <meta name="apple-mobile-web-app-title" content="AGY Relay" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+  <style>
+    /* ── Reset & tokens ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0d1117;
+      --bg2:          #161b22;
+      --bg3:          #21262d;
+      --surface:      #1c2128;
+      --border:       #30363d;
+      --border-glow:  rgba(88, 166, 255, 0.4);
+
+      --accent:       #58a6ff;
+      --accent2:      #a371f7;
+      --accent3:      #3fb950;
+      --accent-err:   #f85149;
+      --accent-warn:  #d29922;
+
+      --text-primary: #e6edf3;
+      --text-2:       #8b949e;
+      --text-3:       #484f58;
+
+      --user-bubble:  linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+      --ai-bubble:    #1c2128;
+
+      --radius:       14px;
+      --radius-sm:    8px;
+      --font-mono:    'JetBrains Mono', monospace;
+      --font-ui:      'Inter', system-ui, -apple-system, sans-serif;
+      --shadow-glow:  0 0 30px rgba(88,166,255,0.12);
+      --transition:   0.2s cubic-bezier(0.4,0,0.2,1);
+      --app-height:   100vh;
+    }
+
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      width: 100%;
+      overflow: hidden;
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      height: var(--app-height, 100dvh);
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13,17,23,0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 90;
+      flex-shrink: 0;
+      gap: 8px;
+      position: relative;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 4px 16px rgba(88,166,255,0.3);
+      flex-shrink: 0;
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .logo-icon:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(88,166,255,0.45);
+    }
+    .logo-icon:active {
+      transform: scale(0.95);
+    }
+
+    .logo-text {
+      min-width: 0;
+    }
+
+    .logo-text h1 {
+      font-size: 15px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .logo-text p {
+      font-size: 10px;
+      color: var(--text-2);
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ── Top-right standalone status dot ──────────────────────────────── */
+    #status-dot-container {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      padding-right: 2px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text-3);
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+    .status-dot.connected { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
+    .status-dot.connecting { background: var(--accent-warn); animation: pulse 1s infinite; }
+    .status-dot.error { background: var(--accent-err); box-shadow: 0 0 8px var(--accent-err); }
+
+    @keyframes pulse {
+      0%,100% { opacity:1; transform: scale(1); } 50% { opacity:0.3; transform: scale(0.85); }
+    }
+
+    /* ── Main Layout & Sidebar ───────────────────────────────────────── */
+    #main-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #sidebar-backdrop {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      z-index: 95;
+      transition: opacity 0.25s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    #sidebar.collapsed {
+      margin-left: -280px;
+    }
+
+    @media (max-width: 768px) {
+      #sidebar {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 82%;
+        max-width: 320px;
+        margin-left: 0;
+        transform: translateX(-100%);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+      }
+      #sidebar.mobile-open {
+        transform: translateX(0);
+      }
+      #sidebar-backdrop.active {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #header-sidebar-toggle-btn {
+        display: flex !important;
+      }
+    }
+
+    .sidebar-header {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .sidebar-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sidebar-new-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px dashed var(--border);
+      background: var(--bg3);
+      color: var(--text-primary);
+      cursor: pointer;
+      width: 100%;
+      justify-content: center;
+      transition: var(--transition);
+    }
+    .sidebar-new-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .sidebar-search {
+      width: 100%;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      outline: none;
+      transition: var(--transition);
+    }
+    .sidebar-search:focus { border-color: var(--accent); }
+
+    .sidebar-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 6px 4px;
+      margin-top: 4px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .sidebar-session-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* ── Archive folder styling (bottom of sidebar) ───────────────────── */
+    .sidebar-archive-section {
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+    .sidebar-archive-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition);
+    }
+    .sidebar-archive-header:hover { color: var(--accent); background: var(--bg3); }
+    .archive-toggle-icon {
+      font-size: 10px;
+      transition: transform 0.2s ease;
+    }
+    .sidebar-archive-header.open .archive-toggle-icon {
+      transform: rotate(90deg);
+    }
+    .sidebar-archive-list {
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 6px 8px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sidebar-archive-list.collapsed {
+      display: none;
+    }
+
+    .sidebar-session-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-2);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: var(--transition);
+      gap: 8px;
+      group: relative;
+    }
+    .sidebar-session-item:hover { background: var(--bg3); color: var(--text-primary); }
+    .sidebar-session-item.active {
+      background: linear-gradient(135deg, rgba(88,166,255,0.15), rgba(163,113,247,0.15));
+      border-color: rgba(88,166,255,0.4);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .session-item-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .session-item-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.7;
+    }
+    .sidebar-session-item:hover .session-item-actions { opacity: 1; }
+
+    .icon-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-3);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .icon-action-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+    .icon-action-btn.delete-btn:hover { background: rgba(248,81,73,0.2); color: var(--accent-err); }
+
+    #sidebar-toggle-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text-2);
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+    #sidebar-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Chat container ──────────────────────────────────────────────── */
+    #chat-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .messages-area {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #messages {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Message bubbles ─────────────────────────────────────────────── */
+    .msg-group {
+      display: flex;
+      flex-direction: column;
+      max-width: 96%;
+      animation: msgIn 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-group.user { align-self: flex-end; align-items: flex-end; }
+    .msg-group.agent { align-self: flex-start; align-items: flex-start; }
+
+    .msg-label {
+      font-size: 10px;
+      color: var(--text-3);
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .bubble {
+      padding: 9px 12px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      line-height: 1.5;
+      word-break: break-word;
+      white-space: pre-wrap;
+      font-family: var(--font-mono);
+    }
+
+    .bubble.user {
+      background: var(--user-bubble);
+      border-radius: var(--radius) var(--radius) 4px var(--radius);
+      color: #fff;
+    }
+
+    .bubble.output, .bubble.agent {
+      background: var(--ai-bubble);
+      border: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) var(--radius) 4px;
+      color: var(--text-primary);
+    }
+
+    .bubble.thinking {
+      background: rgba(163,113,247,0.08);
+      border: 1px solid rgba(163,113,247,0.25);
+      color: var(--accent2);
+      font-size: 12px;
+      padding: 8px 12px;
+    }
+
+    .bubble.tool {
+      background: rgba(88,166,255,0.05);
+      border: 1px solid rgba(88,166,255,0.2);
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    #messages.hide-tools .bubble.tool {
+      display: none !important;
+    }
+
+    .bubble.success {
+      background: rgba(63,185,80,0.08);
+      border: 1px solid rgba(63,185,80,0.25);
+      color: var(--accent3);
+      font-size: 12px;
+    }
+
+    .bubble.error {
+      background: rgba(248,81,73,0.08);
+      border: 1px solid rgba(248,81,73,0.25);
+      color: var(--accent-err);
+      font-size: 12px;
+    }
+
+    .bubble.system {
+      align-self: center;
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--text-3);
+      font-size: 11px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      text-align: center;
+    }
+
+    /* ── Empty state ─────────────────────────────────────────────────── */
+    #empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 10px;
+      color: var(--text-3);
+      text-align: center;
+      padding: 20px;
+    }
+    #empty-state .icon { font-size: 40px; }
+    #empty-state h2 { font-size: 16px; color: var(--text-2); }
+    #empty-state p { font-size: 12px; max-width: 320px; line-height: 1.5; }
+
+    /* ── Thinking indicator ──────────────────────────────────────────── */
+    #thinking-indicator {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px 6px;
+      flex-shrink: 0;
+    }
+    #thinking-indicator.visible { display: flex; }
+
+    .thinking-dots {
+      display: flex;
+      gap: 4px;
+    }
+    .thinking-dots span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent2);
+      animation: bounce 1.2s infinite;
+    }
+    .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,80%,100% { transform:scale(0.6); opacity:0.3; }
+      40% { transform:scale(1); opacity:1; }
+    }
+
+    /* ── Input area ──────────────────────────────────────────────────── */
+    #input-area {
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+
+    #input-form {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      transition: var(--transition);
+    }
+    #input-form:focus-within {
+      border-color: var(--border-glow);
+      box-shadow: var(--shadow-glow);
+    }
+
+    #message-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      font-size: 14px;
+      line-height: 1.4;
+      resize: none;
+      max-height: 140px;
+      min-height: 24px;
+    }
+    #message-input::placeholder { color: var(--text-3); }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    #interrupt-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgba(248,81,73,0.3);
+      border-radius: var(--radius-sm);
+      background: rgba(248,81,73,0.1);
+      color: var(--accent-err);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    #interrupt-btn:hover { background: rgba(248,81,73,0.2); border-color: var(--accent-err); }
+
+    #send-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 0 14px;
+      height: 36px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      color: white;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #send-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(88,166,255,0.3); }
+    #send-btn:active { transform: translateY(0); }
+    #send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* ── Sidebar (workspace info) ────────────────────────────────────── */
+    #workspace-label {
+      font-size: 10px;
+      color: var(--text-3);
+      padding: 2px 4px 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    #workspace-label code {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      background: var(--bg3);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--text-2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 180px;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text-primary);
+      flex-shrink: 0;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger:hover { border-color: var(--accent-err); color: var(--accent-err); }
+
+    /* ── Toast ───────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translate(-50%, 20px);
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      opacity: 0;
+      transition: var(--transition);
+      z-index: 1000;
+      pointer-events: none;
+      white-space: nowrap;
+      max-width: 90vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+    /* ── Floating scroll to bottom button ───────────────────────────── */
+    #scroll-btn {
+      position: absolute;
+      bottom: 12px;
+      right: 16px;
+      padding: 7px 14px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+      border: 1.5px solid rgba(255,255,255,0.4);
+      color: #ffffff;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+      z-index: 60;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.6), 0 0 14px rgba(88,166,255,0.5);
+      animation: msgIn 0.2s ease;
+      user-select: none;
+    }
+    #scroll-btn.visible { display: flex; }
+    #scroll-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 22px rgba(0,0,0,0.7), 0 0 18px rgba(88,166,255,0.7);
+      filter: brightness(1.2);
+    }
+    #scroll-btn:active {
+      transform: translateY(0);
+    }
+
+    /* ── Responsive Mobile First Adjustments ────────────────────────────────── */
+    @media (max-width: 600px) {
+      header {
+        padding: 6px 12px;
+        gap: 6px;
+      }
+      .logo-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+      }
+      .logo-text h1 {
+        font-size: 13px;
+      }
+      .logo-text p {
+        display: none;
+      }
+      #messages {
+        padding: 8px 6px;
+        gap: 6px;
+      }
+      .msg-group {
+        max-width: 96%;
+      }
+      .bubble {
+        font-size: 13px;
+        padding: 8px 10px;
+        line-height: 1.45;
+      }
+      #input-area {
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+      }
+      #input-form {
+        padding: 6px 8px;
+        gap: 4px;
+      }
+      #message-input {
+        font-size: 15px; /* Prevents auto-zoom on iOS */
+      }
+      #upload-btn, #interrupt-btn {
+        width: 34px;
+        height: 34px;
+      }
+      #send-btn {
+        height: 34px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+    }
+
+    /* ── Model selector ──────────────────────────────────────────────── */
+    #model-selector {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    #model-label { font-size: 10px; color: var(--text-3); white-space: nowrap; }
+    #model-select {
+      appearance: none;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      font-size: 10px;
+      padding: 2px 18px 2px 6px;
+      height: 24px;
+      cursor: pointer;
+      outline: none;
+      transition: var(--transition);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b949e'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 5px center;
+      max-width: 130px;
+    }
+    #model-select:hover { border-color: var(--accent); }
+    #model-select:focus { border-color: var(--border-glow); }
+    #model-select option { background: var(--bg2); }
+
+    /* ── Image upload ────────────────────────────────────────────────── */
+    #upload-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg3);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    #upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+    #file-input { display: none; }
+
+    #image-previews {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 4px 6px;
+    }
+    #image-previews:empty { display: none; }
+
+    .img-preview-chip {
+      position: relative;
+      display: inline-flex;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      animation: msgIn 0.2s ease;
+    }
+    .img-preview-chip img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      display: block;
+    }
+    .img-preview-chip .remove-img {
+      position: absolute;
+      top: 2px; right: 2px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .img-preview-chip .remove-img:hover { background: var(--accent-err); }
+
+    /* ── Resume Conversation Modal ────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: msgIn 0.2s ease;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .modal-close {
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--text-3);
+      transition: var(--transition);
+    }
+    .modal-close:hover { color: var(--accent-err); }
+    .modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .modal-search {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      outline: none;
+    }
+    .modal-search:focus { border-color: var(--accent); }
+    .conv-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .conv-item {
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .conv-item:hover { border-color: var(--accent); background: var(--bg3); }
+    .conv-title { font-size: 13px; font-weight: 600; color: var(--accent); }
+    .conv-preview { font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .conv-meta { font-size: 10px; color: var(--text-3); display: flex; justify-content: space-between; }
+    /* ── Settings Modal ──────────────────────────────────────────────── */
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      gap: 12px;
+    }
+    .settings-row-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .settings-row-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .settings-row-desc {
+      font-size: 11px;
+      color: var(--text-2);
+    }
+    .settings-select {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      padding: 6px 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    .settings-toggle-btn {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text-primary);
+      transition: var(--transition);
+    }
+    .settings-toggle-btn.active {
+      border-color: var(--accent);
+      background: rgba(88,166,255,0.15);
+      color: var(--accent);
+    }
+    #settings-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg3);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    #settings-btn:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon" id="logo-sidebar-toggle-btn" title="Toggle Sessions Sidebar">⚡</div>
+      <div class="logo-text">
+        <h1>AGY Relay</h1>
+        <p>Antigravity Remote Companion</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div id="status-dot-container" title="Connected">
+        <div class="status-dot connecting" id="status-dot"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout (Sidebar + Chat) -->
+  <div id="main-layout">
+
+    <!-- Mobile sidebar backdrop overlay -->
+    <div id="sidebar-backdrop"></div>
+
+    <!-- Left Sidebar -->
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button id="sidebar-toggle-btn" title="Collapse Sidebar">☰</button>
+          <span class="sidebar-title">Sessions</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <button class="sidebar-new-btn" id="sidebar-settings-btn" style="width:auto;padding:6px 10px" title="Settings">⚙</button>
+          <button class="sidebar-new-btn" id="sidebar-new-btn" style="width:auto">＋ New</button>
+        </div>
+      </div>
+      <div style="padding:8px 10px 4px">
+        <input type="text" class="sidebar-search" id="sidebar-search-input" placeholder="Search sessions & past conversations…" />
+      </div>
+      <div class="sidebar-session-list" id="sidebar-session-list">
+        <!-- Rendered dynamically -->
+      </div>
+      <!-- Bottom Archive Folder Section -->
+      <div class="sidebar-archive-section">
+        <div class="sidebar-archive-header" id="archive-folder-toggle">
+          <span style="display:flex;align-items:center;gap:6px">📁 Archive</span>
+          <span class="archive-toggle-icon" id="archive-toggle-icon">►</span>
+        </div>
+        <div class="sidebar-archive-list collapsed" id="sidebar-archive-list">
+          <div style="font-size:11px;color:var(--text-3);text-align:center;padding:10px">Click to load archived sessions</div>
+        </div>
+      </div>
+      <!-- Version Info Footer -->
+      <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">vA202608.01</span>
+        <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
+      </div>
+    </div>
+
+    <!-- Chat container -->
+    <div id="chat-container">
+      <div class="messages-area">
+        <div id="messages">
+          <div id="empty-state">
+            <div class="icon">🤖</div>
+            <h2>No session active</h2>
+            <p>Create a new session or connect to an existing one from the left sidebar to start chatting with AGY.</p>
+          </div>
+        </div>
+        <button id="scroll-btn" title="Scroll to bottom">↓ Jump to latest</button>
+      </div>
+
+      <!-- Thinking indicator -->
+      <div id="thinking-indicator">
+        <div class="thinking-dots"><span></span><span></span><span></span></div>
+        <span style="font-size:12px;color:var(--text-3)">AGY is thinking…</span>
+      </div>
+
+      <!-- Input area (fixed at bottom of chat container) -->
+      <div id="input-area">
+        <!-- Image previews strip -->
+        <div id="image-previews"></div>
+        <div id="workspace-label">
+          <span>Workspace:</span><code id="workspace-path">—</code>
+          <span style="margin-left:auto;color:var(--text-3)" id="session-id-label"></span>
+        </div>
+        <div style="height:6px"></div>
+        <div id="input-form">
+          <textarea
+            id="message-input"
+            rows="1"
+            placeholder="Send a message to AGY… (Enter to send, Shift+Enter for newline)"
+            autocomplete="off"
+            spellcheck="true"
+          ></textarea>
+          <div class="input-actions">
+            <input type="file" id="file-input" accept="image/*" multiple />
+            <button id="upload-btn" title="Attach image">🖼</button>
+            <button id="interrupt-btn" title="Send Ctrl+C (interrupt)">⏹</button>
+            <button id="send-btn">Send ↵</button>
+          </div>
+        </div>
+      </div>
+    </div> <!-- /chat-container -->
+  </div> <!-- /main-layout -->
+</div> <!-- /app -->
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>⚙ Settings & Preferences</h3>
+      <span class="modal-close" id="settings-modal-close">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <span class="settings-row-title">Active Model</span>
+          <span class="settings-row-desc">Select the AI model for this session</span>
+        </div>
+        <select id="model-select" class="settings-select">
+          <option value="">(default)</option>
+        </select>
+      </div>
+
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <span class="settings-row-title">Internal Tool Visibility</span>
+          <span class="settings-row-desc">Show or hide background commands & tool executions</span>
+        </div>
+        <button id="toggle-tools-btn" class="settings-toggle-btn active">Tools: ON</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let ws = null;
+  let currentSessionId = null;
+  let sessions = {};          // id -> { id, workspace, model, ws }
+  let isThinking = false;
+  let autoScroll = true;
+  let pendingImages = [];     // { file, url, serverPath, serverUrl }
+  let availableModels = [];
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const BASE_URL = window.location.origin;
+  const WS_BASE  = `${protocol}//${window.location.host}`;
+
+  // ── DOM refs ───────────────────────────────────────────────────────────
+  const messagesEl     = document.getElementById('messages');
+  const emptyState         = document.getElementById('empty-state');
+  const inputEl            = document.getElementById('message-input');
+  const sendBtn            = document.getElementById('send-btn');
+  const interruptBtn       = document.getElementById('interrupt-btn');
+  const clearBtn           = document.getElementById('clear-btn');
+  const statusDot          = document.getElementById('status-dot');
+  const statusDotContainer = document.getElementById('status-dot-container');
+  const thinkingEl         = document.getElementById('thinking-indicator');
+  const scrollBtn          = document.getElementById('scroll-btn');
+  const workspacePath      = document.getElementById('workspace-path');
+  const sessionIdLabel     = document.getElementById('session-id-label');
+  const toastEl            = document.getElementById('toast');
+  const modelSelect        = document.getElementById('model-select');
+  const toggleToolsBtn     = document.getElementById('toggle-tools-btn');
+  const sidebarSettingsBtn = document.getElementById('sidebar-settings-btn');
+  const settingsModal      = document.getElementById('settings-modal');
+  const settingsModalClose = document.getElementById('settings-modal-close');
+  const fileInput          = document.getElementById('file-input');
+  const uploadBtn          = document.getElementById('upload-btn');
+  const imagePreviews      = document.getElementById('image-previews');
+
+  // Settings modal open/close
+  if (sidebarSettingsBtn) {
+    sidebarSettingsBtn.addEventListener('click', () => {
+      closeMobileSidebar();
+      settingsModal.classList.add('open');
+    });
+  }
+
+  settingsModalClose.addEventListener('click', () => {
+    settingsModal.classList.remove('open');
+  });
+
+  settingsModal.addEventListener('click', e => {
+    if (e.target === settingsModal) settingsModal.classList.remove('open');
+  });
+
+  // Tool visibility preference (persistent)
+  let showTools = true;
+  try {
+    const saved = localStorage.getItem('awp_show_tools');
+    if (saved !== null) showTools = (saved === 'true');
+  } catch(e) {}
+
+  function updateToolsVisibility() {
+    if (showTools) {
+      messagesEl.classList.remove('hide-tools');
+      toggleToolsBtn.textContent = 'Tools: ON';
+      toggleToolsBtn.classList.add('active');
+    } else {
+      messagesEl.classList.add('hide-tools');
+      toggleToolsBtn.textContent = 'Tools: OFF';
+      toggleToolsBtn.classList.remove('active');
+    }
+  }
+
+  toggleToolsBtn.addEventListener('click', () => {
+    showTools = !showTools;
+    try { localStorage.setItem('awp_show_tools', showTools); } catch(e){}
+    updateToolsVisibility();
+    toast(showTools ? 'Tool execution steps visible' : 'Tool execution steps hidden', 'info');
+  });
+
+  updateToolsVisibility();
+
+  // Status dot click helper
+  statusDotContainer.addEventListener('click', () => {
+    const isConn = statusDot.classList.contains('connected');
+    const isErr  = statusDot.classList.contains('error');
+    if (isConn) {
+      toast('Connected to AGY server', 'success');
+    } else if (isErr) {
+      toast('Disconnected from server. Reconnecting…', 'error');
+      if (currentSessionId) connectSession(currentSessionId);
+    } else {
+      toast('Connecting to AGY…', 'info');
+    }
+  });
+
+  // ── Utilities ──────────────────────────────────────────────────────────
+  function toast(msg, type = 'info') {
+    toastEl.textContent = msg;
+    toastEl.style.borderColor = type === 'error' ? 'var(--accent-err)' :
+                                type === 'success' ? 'var(--accent3)' : 'var(--border)';
+    toastEl.classList.add('show');
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 3000);
+  }
+
+  function setStatus(state, text) {
+    statusDot.className = 'status-dot ' + state;
+    if (statusDotContainer) {
+      statusDotContainer.title = text || state;
+    }
+  }
+
+  function setThinking(val) {
+    isThinking = val;
+    thinkingEl.classList.toggle('visible', val);
+  }
+
+  function scrollToBottom(force = false) {
+    if (autoScroll || force) {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+  }
+
+  // ── Message rendering ──────────────────────────────────────────────────
+  function appendMessage(msg) {
+    // Hide empty state
+    emptyState.style.display = 'none';
+
+    if (msg.type === 'history') {
+      // Bulk insert history
+      msg.messages.forEach(m => appendSingleMessage(m));
+      // Force instantaneous jump to the bottom
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return;
+    }
+    appendSingleMessage(msg);
+    scrollToBottom();
+  }
+
+  function appendSingleMessage(msg) {
+    const type = msg.type || 'output';
+
+    // System messages: centered pill
+    if (type === 'system') {
+      const el = document.createElement('div');
+      el.className = 'bubble system msg-group';
+      el.textContent = msg.text;
+      messagesEl.appendChild(el);
+      return;
+    }
+
+    // Any real content from AGY clears the thinking indicator
+    const isUser = type === 'user';
+    if (!isUser) setThinking(false);
+
+    const groupClass = isUser ? 'user' : 'agent';
+
+    // Collapse consecutive same-side messages into one group
+    const lastGroup = messagesEl.lastElementChild;
+    if (
+      lastGroup &&
+      lastGroup.classList.contains('msg-group') &&
+      lastGroup.classList.contains(groupClass) &&
+      !isUser
+    ) {
+      const bubble = document.createElement('div');
+      bubble.className = `bubble ${type}`;
+      bubble.textContent = msg.text;
+      lastGroup.appendChild(bubble);
+      scrollToBottom();
+      return;
+    }
+
+    // New group
+    const group = document.createElement('div');
+    group.className = `msg-group ${groupClass}`;
+
+    const label = document.createElement('div');
+    label.className = 'msg-label';
+    label.innerHTML = isUser
+      ? `<span>You</span><span>${fmtTime(msg.timestamp)}</span>`
+      : `<span>⚡ AGY</span><span>${fmtTime(msg.timestamp)}</span>`;
+    group.appendChild(label);
+
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${type}`;
+    bubble.textContent = msg.text;
+    group.appendChild(bubble);
+
+    messagesEl.appendChild(group);
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch { return ''; }
+  }
+
+  // ── Models ─────────────────────────────────────────────────────────────
+  async function loadModels() {
+    try {
+      const r = await fetch(`${BASE_URL}/api/models`);
+      const d = await r.json();
+      availableModels = d.models || [];
+      modelSelect.innerHTML = '<option value="">(default)</option>';
+      availableModels.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.label;
+        modelSelect.appendChild(opt);
+      });
+    } catch (e) {
+      console.warn('Could not load models', e);
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  async function openPastConversation(convId) {
+    toast(`Opening AGY conversation ${convId.slice(0, 8)}…`, 'info');
+    try {
+      const res = await fetch(`${BASE_URL}/api/conversations/${convId}/open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const s = await res.json();
+      if (s.session_id) {
+        sessions[s.session_id] = s;
+        // Refresh conversations list in background
+        await fetchConversations();
+        renderSessionTabs();
+        connectSession(s.session_id);
+        toast(`Opened conversation: ${s.name || s.session_id}`, 'success');
+      } else {
+        toast(`Open error: ${s.error || 'unknown'}`, 'error');
+      }
+    } catch (e) {
+      toast(`Open error: ${e.message}`, 'error');
+    }
+  }
+
+  // ── Image upload ───────────────────────────────────────────────────────
+  uploadBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async () => {
+    if (!currentSessionId) { toast('Start a session first', 'error'); return; }
+    const files = Array.from(fileInput.files);
+    for (const file of files) {
+      await addImagePreview(file);
+    }
+    fileInput.value = '';
+  });
+
+  // Paste image from clipboard
+  document.addEventListener('paste', async (e) => {
+    if (!currentSessionId) return;
+    const items = Array.from(e.clipboardData?.items || []);
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) await addImagePreview(file);
+      }
+    }
+  });
+
+  // Drag and drop onto input area
+  document.getElementById('input-area').addEventListener('dragover', e => {
+    e.preventDefault();
+    e.currentTarget.style.borderColor = 'var(--accent)';
+  });
+  document.getElementById('input-area').addEventListener('dragleave', e => {
+    e.currentTarget.style.borderColor = '';
+  });
+  document.getElementById('input-area').addEventListener('drop', async e => {
+    e.preventDefault();
+    e.currentTarget.style.borderColor = '';
+    if (!currentSessionId) { toast('Start a session first', 'error'); return; }
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    for (const file of files) await addImagePreview(file);
+  });
+
+  async function addImagePreview(file) {
+    // Local preview immediately
+    const localUrl = URL.createObjectURL(file);
+    const entry = { file, localUrl, serverPath: null, serverUrl: null, id: Math.random().toString(36).slice(2) };
+    pendingImages.push(entry);
+    renderImagePreviews();
+
+    // Upload to server
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch(`${BASE_URL}/api/sessions/${currentSessionId}/upload`, { method: 'POST', body: fd });
+      const d = await r.json();
+      if (d.ok) {
+        entry.serverPath = d.path;
+        entry.serverUrl  = d.url;
+        toast(`Image ready: ${d.filename}`, 'success');
+      } else {
+        toast('Upload failed: ' + (d.error || '?'), 'error');
+        pendingImages = pendingImages.filter(p => p.id !== entry.id);
+        renderImagePreviews();
+      }
+    } catch(e) {
+      toast('Upload error: ' + e.message, 'error');
+      pendingImages = pendingImages.filter(p => p.id !== entry.id);
+      renderImagePreviews();
+    }
+  }
+
+  function renderImagePreviews() {
+    imagePreviews.innerHTML = '';
+    pendingImages.forEach(entry => {
+      const chip = document.createElement('div');
+      chip.className = 'img-preview-chip';
+
+      const img = document.createElement('img');
+      img.src = entry.localUrl;
+      chip.appendChild(img);
+
+      const rm = document.createElement('span');
+      rm.className = 'remove-img';
+      rm.textContent = '×';
+      rm.addEventListener('click', () => {
+        pendingImages = pendingImages.filter(p => p.id !== entry.id);
+        renderImagePreviews();
+      });
+      chip.appendChild(rm);
+      imagePreviews.appendChild(chip);
+    });
+  }
+
+  // ── Session management ─────────────────────────────────────────────────
+  async function fetchSessions() {
+    try {
+      const r = await fetch(`${BASE_URL}/api/sessions`);
+      const d = await r.json();
+      d.sessions.forEach(s => {
+        if (!sessions[s.session_id]) sessions[s.session_id] = s;
+      });
+      renderSessionTabs();
+    } catch (e) {
+      console.warn('Could not fetch sessions', e);
+    }
+  }
+
+  async function createSession() {
+    try {
+      sidebarNewBtn.textContent = '⌛ Starting…';
+      sidebarNewBtn.disabled = true;
+      const model = modelSelect.value;
+      const r = await fetch(`${BASE_URL}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace: null, model }),
+      });
+      const s = await r.json();
+      sessions[s.session_id] = s;
+      renderSessionTabs();
+      connectSession(s.session_id);
+      toast(`New session started${model ? ' · ' + model : ''}`, 'success');
+    } catch (e) {
+      toast('Failed to create session: ' + e.message, 'error');
+    } finally {
+      sidebarNewBtn.textContent = '＋ New';
+      sidebarNewBtn.disabled = false;
+    }
+  }
+
+  async function removeSession(id) {
+    try {
+      await fetch(`${BASE_URL}/api/sessions/${id}`, { method: 'DELETE' });
+    } catch (e) { /* ignore */ }
+    delete sessions[id];
+    if (currentSessionId === id) {
+      currentSessionId = null;
+      if (ws) { ws.close(); ws = null; }
+      setStatus('error', 'Disconnected');
+      messagesEl.innerHTML = '';
+      emptyState.style.display = 'flex';
+    }
+    renderSessionTabs();
+  }
+
+  const sidebar                  = document.getElementById('sidebar');
+  const sidebarBackdrop          = document.getElementById('sidebar-backdrop');
+  const sidebarToggleBtn         = document.getElementById('sidebar-toggle-btn');
+  const logoSidebarToggleBtn     = document.getElementById('logo-sidebar-toggle-btn');
+  const sidebarNewBtn            = document.getElementById('sidebar-new-btn');
+  const sidebarSessionList       = document.getElementById('sidebar-session-list');
+  const sidebarSearchInput       = document.getElementById('sidebar-search-input');
+  const archiveFolderToggle      = document.getElementById('archive-folder-toggle');
+  const sidebarArchiveList       = document.getElementById('sidebar-archive-list');
+
+  let pastConversations = [];
+  let archivedConversations = [];
+  let isArchiveOpen = false;
+  let sidebarSearchFilter = '';
+
+  function openMobileSidebar() {
+    sidebar.classList.add('mobile-open');
+    sidebarBackdrop.classList.add('active');
+  }
+
+  function closeMobileSidebar() {
+    sidebar.classList.remove('mobile-open');
+    sidebarBackdrop.classList.remove('active');
+  }
+
+  function toggleSidebar() {
+    if (window.innerWidth <= 768) {
+      if (sidebar.classList.contains('mobile-open')) {
+        closeMobileSidebar();
+      } else {
+        openMobileSidebar();
+      }
+    } else {
+      sidebar.classList.toggle('collapsed');
+    }
+  }
+
+  sidebarToggleBtn.addEventListener('click', toggleSidebar);
+  if (logoSidebarToggleBtn) logoSidebarToggleBtn.addEventListener('click', toggleSidebar);
+  sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+  sidebarNewBtn.addEventListener('click', () => {
+    closeMobileSidebar();
+    createSession();
+  });
+
+  // Swipe gestures for opening/closing sidebar on mobile
+  let touchStartX = 0;
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  window.addEventListener('touchend', e => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const dx = touchEndX - touchStartX;
+    const dy = touchEndY - touchStartY;
+
+    // Only respond to horizontal swipes
+    if (Math.abs(dx) > 60 && Math.abs(dy) < 50) {
+      if (dx > 0 && touchStartX < 40) {
+        // Swipe from left edge -> open sidebar
+        openMobileSidebar();
+      } else if (dx < 0 && sidebar.classList.contains('mobile-open')) {
+        // Swipe left when open -> close sidebar
+        closeMobileSidebar();
+      }
+    }
+  }, { passive: true });
+
+  // Lazy-load Archive folder on click
+  archiveFolderToggle.addEventListener('click', async () => {
+    isArchiveOpen = !isArchiveOpen;
+    archiveFolderToggle.classList.toggle('open', isArchiveOpen);
+    sidebarArchiveList.classList.toggle('collapsed', !isArchiveOpen);
+
+    if (isArchiveOpen) {
+      await fetchArchivedConversations();
+    }
+  });
+
+  let sidebarSearchTimer = null;
+  sidebarSearchInput.addEventListener('input', () => {
+    clearTimeout(sidebarSearchTimer);
+    sidebarSearchTimer = setTimeout(() => {
+      sidebarSearchFilter = sidebarSearchInput.value.trim().toLowerCase();
+      renderSessionTabs();
+      if (isArchiveOpen) fetchArchivedConversations();
+    }, 200);
+  });
+
+  async function fetchConversations() {
+    try {
+      const res = await fetch(`${BASE_URL}/api/conversations?limit=100&archived=false`);
+      const data = await res.json();
+      pastConversations = data.conversations || [];
+    } catch (e) {
+      console.warn('Could not fetch AGY conversations', e);
+    }
+  }
+
+  async function fetchArchivedConversations() {
+    sidebarArchiveList.innerHTML = '<div style="font-size:11px;color:var(--text-3);text-align:center;padding:10px">Loading archive…</div>';
+    try {
+      const q = sidebarSearchFilter;
+      const res = await fetch(`${BASE_URL}/api/conversations?limit=100&archived=true&query=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      archivedConversations = data.conversations || [];
+      renderArchiveList();
+    } catch (e) {
+      sidebarArchiveList.innerHTML = `<div style="font-size:11px;color:var(--accent-err);text-align:center;padding:10px">Failed: ${e.message}</div>`;
+    }
+  }
+
+  async function archiveConversation(convId, archiveState = True) {
+    try {
+      await fetch(`${BASE_URL}/api/conversations/${convId}/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: archiveState })
+      });
+      toast(archiveState ? 'Moved to Archive' : 'Unarchived session', 'info');
+      await fetchConversations();
+      if (isArchiveOpen) await fetchArchivedConversations();
+      renderSessionTabs();
+    } catch (e) {
+      toast(`Archive error: ${e.message}`, 'error');
+    }
+  }
+
+  async function renameConversation(convId, currentTitle) {
+    const newTitle = prompt('Enter a new title for this session:', currentTitle);
+    if (!newTitle || newTitle.trim() === '' || newTitle === currentTitle) return;
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/conversations/${convId}/rename`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle.trim() })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast(`Renamed session to "${data.title}"`, 'success');
+        await fetchConversations();
+        if (isArchiveOpen) await fetchArchivedConversations();
+        renderSessionTabs();
+      } else {
+        toast(`Rename failed: ${data.error || 'unknown'}`, 'error');
+      }
+    } catch (e) {
+      toast(`Rename error: ${e.message}`, 'error');
+    }
+  }
+
+  function renderArchiveList() {
+    sidebarArchiveList.innerHTML = '';
+    if (archivedConversations.length === 0) {
+      sidebarArchiveList.innerHTML = '<div style="font-size:11px;color:var(--text-3);text-align:center;padding:10px">Archive is empty</div>';
+      return;
+    }
+
+    archivedConversations.forEach(c => {
+      const item = document.createElement('div');
+      const isActive = sessions[currentSessionId]?.conv_id === c.conversation_id;
+      item.className = 'sidebar-session-item' + (isActive ? ' active' : '');
+
+      const infoDiv = document.createElement('div');
+      infoDiv.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:2px';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'session-item-name';
+      nameSpan.textContent = c.title || c.conversation_id.slice(0, 12);
+      infoDiv.appendChild(nameSpan);
+
+      item.appendChild(infoDiv);
+
+      const actionsDiv = document.createElement('div');
+      actionsDiv.className = 'session-item-actions';
+
+      const unarchiveBtn = document.createElement('span');
+      unarchiveBtn.className = 'icon-action-btn';
+      unarchiveBtn.innerHTML = '📤';
+      unarchiveBtn.title = 'Unarchive Session';
+      unarchiveBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        archiveConversation(c.conversation_id, false);
+      });
+      actionsDiv.appendChild(unarchiveBtn);
+
+      item.appendChild(actionsDiv);
+      item.addEventListener('click', () => {
+        closeMobileSidebar();
+        openPastConversation(c.conversation_id);
+      });
+      sidebarArchiveList.appendChild(item);
+    });
+  }
+
+  function renderSessionTabs() {
+    sidebarSessionList.innerHTML = '';
+    const q = sidebarSearchFilter;
+
+    // Filter non-archived conversations
+    const convs = pastConversations.filter(c => {
+      if (!q) return true;
+      return (c.title || '').toLowerCase().includes(q) ||
+             (c.preview || '').toLowerCase().includes(q) ||
+             (c.conversation_id || '').toLowerCase().includes(q);
+    });
+
+    if (convs.length === 0) {
+      sidebarSessionList.innerHTML = '<div style="font-size:11px;color:var(--text-3);text-align:center;padding:16px">No active sessions</div>';
+      return;
+    }
+
+    convs.forEach(c => {
+      const item = document.createElement('div');
+      const isActive = sessions[currentSessionId]?.conv_id === c.conversation_id;
+      item.className = 'sidebar-session-item' + (isActive ? ' active' : '');
+
+      const infoDiv = document.createElement('div');
+      infoDiv.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:2px';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'session-item-name';
+      nameSpan.textContent = c.title || c.conversation_id.slice(0, 12);
+      infoDiv.appendChild(nameSpan);
+
+      if (c.preview) {
+        const prevSpan = document.createElement('span');
+        prevSpan.style.cssText = 'font-size:10px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px';
+        prevSpan.textContent = c.preview;
+        infoDiv.appendChild(prevSpan);
+      }
+      item.appendChild(infoDiv);
+
+      const actionsDiv = document.createElement('div');
+      actionsDiv.className = 'session-item-actions';
+
+      const editBtn = document.createElement('span');
+      editBtn.className = 'icon-action-btn';
+      editBtn.innerHTML = '✏️';
+      editBtn.title = 'Rename Session';
+      editBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        renameConversation(c.conversation_id, c.title);
+      });
+      actionsDiv.appendChild(editBtn);
+
+      const archiveBtn = document.createElement('span');
+      archiveBtn.className = 'icon-action-btn';
+      archiveBtn.innerHTML = '📦';
+      archiveBtn.title = 'Archive Session';
+      archiveBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        archiveConversation(c.conversation_id, true);
+      });
+      actionsDiv.appendChild(archiveBtn);
+
+      item.appendChild(actionsDiv);
+      item.addEventListener('click', () => {
+        closeMobileSidebar();
+        openPastConversation(c.conversation_id);
+      });
+      sidebarSessionList.appendChild(item);
+    });
+  }
+
+  // ── WebSocket connection ───────────────────────────────────────────────
+  async function connectSession(sessionId) {
+    if (ws) { ws.close(); ws = null; }
+
+    currentSessionId = sessionId;
+    try { localStorage.setItem('awp_last_session_id', sessionId); } catch(e){}
+    renderSessionTabs();
+
+    // Enable send button immediately so user can start typing
+    sendBtn.disabled = false;
+    setThinking(false);
+
+    setStatus('connecting', 'Connecting…');
+    workspacePath.textContent = sessions[sessionId]?.workspace || '…';
+    sessionIdLabel.textContent = `#${sessionId}`;
+
+    // Sync model selector to this session's model
+    const sessionModel = sessions[sessionId]?.model;
+    if (sessionModel && sessionModel !== '(default)') {
+      modelSelect.value = sessionModel;
+    } else {
+      modelSelect.value = '';
+    }
+
+    // Clear message container on switch
+    messagesEl.innerHTML = '';
+    emptyState.style.display = 'none';
+
+    // Load history from REST endpoint immediately so content is visible without waiting for WS handshake
+    try {
+      const res = await fetch(`${BASE_URL}/api/sessions/${sessionId}/history`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messages && data.messages.length > 0) {
+          appendMessage({ type: 'history', messages: data.messages });
+        }
+      }
+    } catch (e) {
+      console.warn('Could not pre-fetch session history', e);
+    }
+
+    // Connect WebSocket in the background
+    const wsUrl = `${WS_BASE}/ws/${sessionId}`;
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      setStatus('connected', 'Connected');
+      sendBtn.disabled = false;
+    };
+
+    ws.onmessage = evt => {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch { return; }
+
+      if (msg.type === 'thinking_pulse') { setThinking(true); return; }
+      if (msg.type === 'done')           { setThinking(false); return; }
+      if (msg.type === 'pong')           { return; }
+
+      // History re-sync from WS: render full history
+      if (msg.type === 'history') {
+        messagesEl.innerHTML = '';
+        emptyState.style.display = 'none';
+        appendMessage(msg);
+        return;
+      }
+
+      // User echo: don't clear thinking (response is still coming)
+      if (msg.type !== 'user') setThinking(false);
+      appendMessage(msg);
+    };
+
+    ws.onclose = () => {
+      if (currentSessionId === sessionId) {
+        setStatus('error', 'Disconnected');
+        setThinking(false);
+      }
+    };
+
+    ws.onerror = (e) => {
+      if (currentSessionId === sessionId) {
+        setStatus('error', 'Connection error');
+      }
+    };
+  }
+
+  // ── Sending messages ───────────────────────────────────────────────────
+  async function sendMessage() {
+    const text = inputEl.value.trim();
+
+    // Check for /resume command
+    if (text === '/resume' || text.startsWith('/resume ') || text.startsWith('/remsum')) {
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      const parts = text.split(/\s+/);
+      if (parts.length > 1 && parts[1]) {
+        await openPastConversation(parts[1]);
+      } else {
+        sidebarSearchInput.focus();
+        toast('Search past conversations in the left sidebar', 'info');
+      }
+      return;
+    }
+
+    const hasImages = pendingImages.length > 0;
+    if (!text && !hasImages) return;
+
+    // If websocket is connecting, wait briefly for connection
+    if (ws && ws.readyState === WebSocket.CONNECTING) {
+      toast('Connecting… message will send in a moment', 'info');
+      let retries = 0;
+      while (ws && ws.readyState === WebSocket.CONNECTING && retries < 20) {
+        await new Promise(r => setTimeout(r, 150));
+        retries++;
+      }
+    }
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      toast('Not connected. Reconnecting…', 'error');
+      if (currentSessionId) connectSession(currentSessionId);
+      return;
+    }
+
+    // Build the message to send
+    // If images are attached, prepend their paths so AGY can read them
+    let fullText = text;
+    if (hasImages) {
+      const uploadedPaths = pendingImages.filter(p => p.serverPath).map(p => p.serverPath);
+      const pendingCount  = pendingImages.filter(p => !p.serverPath).length;
+      if (pendingCount > 0) {
+        toast('Waiting for image uploads to finish…', 'info');
+        return;
+      }
+      const imageRefs = uploadedPaths.map(p => `[Image: ${p}]`).join(' ');
+      fullText = imageRefs + (text ? '\n' + text : '');
+
+      // Show image bubbles in chat
+      pendingImages.filter(p => p.serverUrl).forEach(p => {
+        appendImageBubble(p.localUrl, p.serverUrl);
+      });
+    }
+
+    ws.send(JSON.stringify({ action: 'input', text: fullText }));
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    pendingImages = [];
+    renderImagePreviews();
+    setThinking(true);
+  }
+
+  // ── Auto-resize textarea ───────────────────────────────────────────────
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
+  });
+
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+
+  // ── Image bubble helper ────────────────────────────────────────────────
+  function appendImageBubble(localUrl, serverUrl) {
+    emptyState.style.display = 'none';
+    const group = document.createElement('div');
+    group.className = 'msg-group user';
+    const label = document.createElement('div');
+    label.className = 'msg-label';
+    label.innerHTML = `<span>You</span><span>${fmtTime(new Date().toISOString())}</span>`;
+    group.appendChild(label);
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble image-msg';
+    const img = document.createElement('img');
+    img.src = localUrl;
+    img.alt = 'Attached image';
+    bubble.appendChild(img);
+    group.appendChild(bubble);
+    messagesEl.appendChild(group);
+    scrollToBottom();
+  }
+
+  interruptBtn.addEventListener('click', () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'interrupt' }));
+      toast('Interrupt sent (Ctrl+C)', 'info');
+      setThinking(false);
+    }
+  });
+
+  // ── Scroll handling ────────────────────────────────────────────────────
+  messagesEl.addEventListener('scroll', () => {
+    const atBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 50;
+    autoScroll = atBottom;
+    scrollBtn.classList.toggle('visible', !atBottom);
+  });
+
+  scrollBtn.addEventListener('click', () => {
+    autoScroll = true;
+    scrollToBottom(true);
+  });
+
+  // ── Mobile height fix (handle mobile virtual viewport height) ───────────
+  function setAppHeight() {
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    scrollToBottom();
+  }
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', setAppHeight);
+    window.visualViewport.addEventListener('scroll', setAppHeight);
+  }
+  window.addEventListener('resize', setAppHeight);
+  window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 200));
+  setAppHeight();
+
+  // Scroll to bottom when focusing input on mobile
+  inputEl.addEventListener('focus', () => {
+    setTimeout(() => {
+      setAppHeight();
+      scrollToBottom(true);
+    }, 300);
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  (async () => {
+    await Promise.all([loadModels(), fetchSessions(), fetchConversations()]);
+    let savedId = null;
+    try { savedId = localStorage.getItem('awp_last_session_id'); } catch(e){}
+
+    if (savedId && sessions[savedId]) {
+      connectSession(savedId);
+    } else if (pastConversations.length > 0) {
+      await openPastConversation(pastConversations[0].conversation_id);
+    } else if (Object.keys(sessions).length > 0) {
+      connectSession(Object.keys(sessions)[0]);
+    } else {
+      await createSession();
+    }
+  })();
+
+  // ── Auto-Reconnect on Tab/Screen Resume ──────────────────────────────────
+  async function checkAndReconnect() {
+    if (!currentSessionId) return;
+    if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+      console.log('[Auto-Reconnect] Tab visible/focused. Reconnecting WebSocket…');
+      connectSession(currentSessionId);
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkAndReconnect();
+    }
+  });
+
+  window.addEventListener('focus', checkAndReconnect);
+  window.addEventListener('online', checkAndReconnect);
+  window.addEventListener('pageshow', checkAndReconnect);
+
+  // Ping keepalive every 20s
+  setInterval(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'ping' }));
+    } else if (ws && ws.readyState === WebSocket.CLOSED && currentSessionId) {
+      checkAndReconnect();
+    }
+  }, 20000);
+
+  // ── Register PWA Service Worker ──────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('PWA ServiceWorker registered:', reg.scope))
+        .catch(err => console.warn('PWA ServiceWorker registration failed:', err));
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+ENV/
+env/
+
+# AGY Relay local runtime data & uploads (Private)
+sessions_data/
+uploads/
+archived_conversations.json
+*.log
+
+# OS & Editors
+.DS_Store
+.idea/
+.vscode/
