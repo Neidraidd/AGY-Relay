@@ -16,33 +16,33 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:           #0d1117;
-      --bg2:          #161b22;
-      --bg3:          #21262d;
-      --surface:      #1c2128;
-      --border:       #30363d;
+      --bg:           #131315;
+      --bg2:          #1b1b1f;
+      --bg3:          #242429;
+      --surface:      #1e1e24;
+      --border:       #2e2e36;
       --border-glow:  rgba(249, 115, 22, 0.4);
 
       --accent:       #f97316;
       --accent-rgb:   249, 115, 22;
       --accent2:      #fb923c;
-      --accent3:      #3fb950;
-      --accent-err:   #f85149;
-      --accent-warn:  #d29922;
+      --accent3:      #4ade80;
+      --accent-err:   #f87171;
+      --accent-warn:  #fbbf24;
 
-      --text-primary: #e6edf3;
-      --text-2:       #8b949e;
-      --text-3:       #484f58;
+      --text-primary: #f3f4f6;
+      --text-2:       #9ca3af;
+      --text-3:       #6b7280;
 
-      --user-bubble:  linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
-      --ai-bubble:    #1c2128;
+      --user-bubble:  #26262d;
+      --ai-bubble:    transparent;
 
-      --radius:       14px;
-      --radius-sm:    8px;
-      --font-mono:    'JetBrains Mono', monospace;
-      --font-ui:      'Inter', system-ui, -apple-system, sans-serif;
-      --shadow-glow:  0 0 30px rgba(249, 115, 22, 0.15);
-      --transition:   0.2s cubic-bezier(0.4,0,0.2,1);
+      --radius:       10px;
+      --radius-sm:    6px;
+      --font-mono:    'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+      --font-ui:      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --shadow-glow:  0 0 30px rgba(249, 115, 22, 0.12);
+      --transition:   0.15s ease;
       --app-height:   100vh;
       --chat-max-width: 50%;
     }
@@ -347,6 +347,42 @@
       display: none;
     }
 
+    .sidebar-view {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .sidebar-view.hidden {
+      display: none;
+    }
+
+    .sidebar-settings-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sidebar-settings-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      transition: var(--transition);
+    }
+    .sidebar-settings-back-btn:hover { color: var(--accent); background: var(--bg3); }
+
     .sidebar-session-item {
       display: flex;
       align-items: center;
@@ -363,8 +399,8 @@
     }
     .sidebar-session-item:hover { background: var(--bg3); color: var(--text-primary); }
     .sidebar-session-item.active {
-      background: linear-gradient(135deg, rgba(88,166,255,0.15), rgba(163,113,247,0.15));
-      border-color: rgba(88,166,255,0.4);
+      background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(251,146,60,0.15));
+      border-color: rgba(249,115,22,0.4);
       color: var(--accent);
       font-weight: 600;
     }
@@ -456,66 +492,74 @@
     #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
     /* ── Message bubbles ─────────────────────────────────────────────── */
+    /* ── Message bubbles (Claude Code aesthetic) ────────────────────── */
     .msg-group {
       display: flex;
       flex-direction: column;
-      max-width: 96%;
-      animation: msgIn 0.25s cubic-bezier(0.4,0,0.2,1);
+      max-width: 100%;
+      animation: msgIn 0.2s cubic-bezier(0.4,0,0.2,1);
+      margin-bottom: 4px;
     }
 
     @keyframes msgIn {
-      from { opacity: 0; transform: translateY(8px); }
+      from { opacity: 0; transform: translateY(4px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
     .msg-group.user { align-self: flex-end; align-items: flex-end; }
-    .msg-group.agent { align-self: flex-start; align-items: flex-start; }
+    .msg-group.agent { align-self: flex-start; align-items: flex-start; width: 100%; }
 
     .msg-label {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-3);
-      margin-bottom: 3px;
+      margin-bottom: 4px;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+      font-weight: 500;
     }
 
     .bubble {
-      padding: 9px 12px;
+      padding: 8px 12px;
       border-radius: var(--radius);
-      font-size: 14px;
-      line-height: 1.5;
+      font-size: 13.5px;
+      line-height: 1.6;
       word-break: break-word;
       white-space: pre-wrap;
-      font-family: var(--font-mono);
+      font-family: var(--font-ui);
     }
 
     .bubble.user {
       background: var(--user-bubble);
-      border-radius: var(--radius) var(--radius) 4px var(--radius);
-      color: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      max-width: 85%;
+      font-family: var(--font-ui);
     }
 
     .bubble.output, .bubble.agent {
-      background: var(--ai-bubble);
-      border: 1px solid var(--border);
-      border-radius: var(--radius) var(--radius) var(--radius) 4px;
+      background: transparent;
+      border: none;
+      padding: 4px 0;
       color: var(--text-primary);
-    }
-
-    .bubble.thinking {
-      background: rgba(163,113,247,0.08);
-      border: 1px solid rgba(163,113,247,0.25);
-      color: var(--accent2);
-      font-size: 12px;
-      padding: 8px 12px;
+      width: 100%;
+      font-size: 14px;
     }
 
     .bubble.tool {
-      background: rgba(88,166,255,0.05);
-      border: 1px solid rgba(88,166,255,0.2);
-      color: var(--accent);
-      font-size: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 11.5px;
+      font-family: var(--font-mono);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      margin: 2px 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: default;
     }
 
     #messages.hide-tools .bubble.tool {
@@ -523,17 +567,19 @@
     }
 
     .bubble.success {
-      background: rgba(63,185,80,0.08);
-      border: 1px solid rgba(63,185,80,0.25);
+      background: rgba(74,222,128,0.06);
+      border: 1px solid rgba(74,222,128,0.2);
       color: var(--accent3);
       font-size: 12px;
+      padding: 6px 10px;
     }
 
     .bubble.error {
-      background: rgba(248,81,73,0.08);
-      border: 1px solid rgba(248,81,73,0.25);
+      background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.25);
       color: var(--accent-err);
       font-size: 12px;
+      padding: 6px 10px;
     }
 
     .bubble.system {
@@ -593,11 +639,10 @@
       40% { transform:scale(1); opacity:1; }
     }
 
-    /* ── Input area ──────────────────────────────────────────────────── */
+    /* ── Input area (Claude Code style prompt) ───────────────────────── */
     #input-area {
-      padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
-      border-top: 1px solid var(--border);
-      background: var(--bg);
+      padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+      background: transparent;
       flex-shrink: 0;
       display: flex;
       justify-content: center;
@@ -609,22 +654,24 @@
       max-width: var(--chat-max-width, 50%);
       display: flex;
       flex-direction: column;
+      gap: 4px;
     }
 
     #input-form {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       align-items: flex-end;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 8px 10px;
+      padding: 10px 12px;
       transition: var(--transition);
       width: 100%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
     #input-form:focus-within {
       border-color: var(--border-glow);
-      box-shadow: var(--shadow-glow);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4), var(--shadow-glow);
     }
 
     #message-input {
@@ -635,10 +682,10 @@
       color: var(--text-primary);
       font-family: var(--font-ui);
       font-size: 14px;
-      line-height: 1.4;
+      line-height: 1.5;
       resize: none;
-      max-height: 140px;
-      min-height: 24px;
+      max-height: 160px;
+      min-height: 26px;
     }
     #message-input::placeholder { color: var(--text-3); }
 
@@ -1133,32 +1180,96 @@
 
     <!-- Left Sidebar -->
     <div id="sidebar">
-      <div class="sidebar-header">
-        <div style="display:flex;align-items:center;gap:8px">
-          <button id="sidebar-toggle-btn" title="Collapse Sidebar">☰</button>
-          <span class="sidebar-title">Sessions</span>
+      <!-- 1. Sessions View -->
+      <div class="sidebar-view" id="sidebar-sessions-view">
+        <div class="sidebar-header">
+          <div style="display:flex;align-items:center;gap:8px">
+            <button id="sidebar-toggle-btn" title="Collapse Sidebar">☰</button>
+            <span class="sidebar-title">Sessions</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <button class="sidebar-new-btn" id="sidebar-settings-btn" style="width:auto;padding:6px 10px" title="Settings">⚙</button>
+            <button class="sidebar-new-btn" id="sidebar-new-btn" style="width:auto">＋ New</button>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:4px">
-          <button class="sidebar-new-btn" id="sidebar-settings-btn" style="width:auto;padding:6px 10px" title="Settings">⚙</button>
-          <button class="sidebar-new-btn" id="sidebar-new-btn" style="width:auto">＋ New</button>
+        <div style="padding:8px 10px 4px">
+          <input type="text" class="sidebar-search" id="sidebar-search-input" placeholder="Search sessions & past conversations…" />
+        </div>
+        <div class="sidebar-session-list" id="sidebar-session-list">
+          <!-- Rendered dynamically -->
+        </div>
+        <!-- Bottom Archive Folder Section -->
+        <div class="sidebar-archive-section">
+          <div class="sidebar-archive-header" id="archive-folder-toggle">
+            <span style="display:flex;align-items:center;gap:6px">📁 Archive</span>
+            <span class="archive-toggle-icon" id="archive-toggle-icon">►</span>
+          </div>
+          <div class="sidebar-archive-list collapsed" id="sidebar-archive-list">
+            <div style="font-size:11px;color:var(--text-3);text-align:center;padding:10px">Click to load archived sessions</div>
+          </div>
         </div>
       </div>
-      <div style="padding:8px 10px 4px">
-        <input type="text" class="sidebar-search" id="sidebar-search-input" placeholder="Search sessions & past conversations…" />
-      </div>
-      <div class="sidebar-session-list" id="sidebar-session-list">
-        <!-- Rendered dynamically -->
-      </div>
-      <!-- Bottom Archive Folder Section -->
-      <div class="sidebar-archive-section">
-        <div class="sidebar-archive-header" id="archive-folder-toggle">
-          <span style="display:flex;align-items:center;gap:6px">📁 Archive</span>
-          <span class="archive-toggle-icon" id="archive-toggle-icon">►</span>
+
+      <!-- 2. Settings View (Embedded in Sidebar) -->
+      <div class="sidebar-view hidden" id="sidebar-settings-view">
+        <div class="sidebar-header">
+          <button class="sidebar-settings-back-btn" id="sidebar-settings-back-btn">
+            <span>‹</span> Sessions
+          </button>
+          <span class="sidebar-title" style="font-size:13px">Settings</span>
         </div>
-        <div class="sidebar-archive-list collapsed" id="sidebar-archive-list">
-          <div style="font-size:11px;color:var(--text-3);text-align:center;padding:10px">Click to load archived sessions</div>
+        <div class="sidebar-settings-container">
+          <div class="settings-section-title">General</div>
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <span class="settings-row-title">Active Model</span>
+              <span class="settings-row-desc">Model for current session</span>
+            </div>
+            <select id="model-select" class="settings-select">
+              <option value="">(default)</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <span class="settings-row-title">Tool Calls</span>
+              <span class="settings-row-desc">Show background commands</span>
+            </div>
+            <button id="toggle-tools-btn" class="settings-toggle-btn active">ON</button>
+          </div>
+
+          <div class="settings-section-title" style="margin-top:8px">Appearance</div>
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <span class="settings-row-title">Chat Width</span>
+              <span class="settings-row-desc">Desktop width</span>
+            </div>
+            <select id="chat-width-select" class="settings-select">
+              <option value="50%">50%</option>
+              <option value="65%">65%</option>
+              <option value="75%">75%</option>
+              <option value="90%">90%</option>
+              <option value="100%">100%</option>
+            </select>
+          </div>
+
+          <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+            <div class="settings-row-info">
+              <span class="settings-row-title">Accent Theme</span>
+              <span class="settings-row-desc">UI highlight and glowing color</span>
+            </div>
+            <div class="color-swatches" id="color-swatches" style="margin-top:2px">
+              <div class="color-swatch active" data-color="orange" style="background:#f97316" title="Orange"></div>
+              <div class="color-swatch" data-color="blue" style="background:#58a6ff" title="Blue"></div>
+              <div class="color-swatch" data-color="purple" style="background:#a855f7" title="Purple"></div>
+              <div class="color-swatch" data-color="emerald" style="background:#10b981" title="Emerald"></div>
+              <div class="color-swatch" data-color="rose" style="background:#f43f5e" title="Rose"></div>
+              <div class="color-swatch" data-color="amber" style="background:#f59e0b" title="Amber"></div>
+            </div>
+          </div>
         </div>
       </div>
+
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
         <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">vA202608.01</span>
@@ -1199,7 +1310,7 @@
             <textarea
               id="message-input"
               rows="1"
-              placeholder="Send a message to AGY… (Enter to send, Shift+Enter for newline)"
+              placeholder="Ask AGY anything, type / for commands…"
               autocomplete="off"
               spellcheck="true"
             ></textarea>
@@ -1207,7 +1318,7 @@
               <input type="file" id="file-input" accept="image/*" multiple />
               <button id="upload-btn" title="Attach image">🖼</button>
               <button id="interrupt-btn" title="Send Ctrl+C (interrupt)">⏹</button>
-              <button id="send-btn">Send ↵</button>
+              <button id="send-btn">↵</button>
             </div>
           </div>
         </div>
@@ -1215,66 +1326,6 @@
     </div> <!-- /chat-container -->
   </div> <!-- /main-layout -->
 </div> <!-- /app -->
-
-<!-- Settings Modal -->
-<div class="modal-overlay" id="settings-modal">
-  <div class="modal-card">
-    <div class="modal-header">
-      <h3>⚙ Settings & Preferences</h3>
-      <span class="modal-close" id="settings-modal-close">✕</span>
-    </div>
-    <div class="modal-body">
-      <div class="settings-section-title">General</div>
-      <div class="settings-row">
-        <div class="settings-row-info">
-          <span class="settings-row-title">Active Model</span>
-          <span class="settings-row-desc">Select the AI model for this session</span>
-        </div>
-        <select id="model-select" class="settings-select">
-          <option value="">(default)</option>
-        </select>
-      </div>
-
-      <div class="settings-row">
-        <div class="settings-row-info">
-          <span class="settings-row-title">Internal Tool Visibility</span>
-          <span class="settings-row-desc">Show or hide background commands & tool executions</span>
-        </div>
-        <button id="toggle-tools-btn" class="settings-toggle-btn active">Tools: ON</button>
-      </div>
-
-      <div class="settings-section-title" style="margin-top:14px">Appearance</div>
-      <div class="settings-row">
-        <div class="settings-row-info">
-          <span class="settings-row-title">Chat Max Width</span>
-          <span class="settings-row-desc">Adjust conversation width on desktop displays</span>
-        </div>
-        <select id="chat-width-select" class="settings-select">
-          <option value="50%">50% (Default)</option>
-          <option value="65%">65%</option>
-          <option value="75%">75%</option>
-          <option value="90%">90%</option>
-          <option value="100%">100% (Full)</option>
-        </select>
-      </div>
-
-      <div class="settings-row">
-        <div class="settings-row-info">
-          <span class="settings-row-title">Accent Theme</span>
-          <span class="settings-row-desc">Customize UI glow, buttons, and highlight color</span>
-        </div>
-        <div class="color-swatches" id="color-swatches">
-          <div class="color-swatch active" data-color="orange" style="background:#f97316" title="Orange (Default)"></div>
-          <div class="color-swatch" data-color="blue" style="background:#58a6ff" title="Blue"></div>
-          <div class="color-swatch" data-color="purple" style="background:#a855f7" title="Purple"></div>
-          <div class="color-swatch" data-color="emerald" style="background:#10b981" title="Emerald"></div>
-          <div class="color-swatch" data-color="rose" style="background:#f43f5e" title="Rose"></div>
-          <div class="color-swatch" data-color="amber" style="background:#f59e0b" title="Amber"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <div id="toast"></div>
 
@@ -1309,27 +1360,27 @@
   const modelSelect        = document.getElementById('model-select');
   const toggleToolsBtn     = document.getElementById('toggle-tools-btn');
   const sidebarSettingsBtn = document.getElementById('sidebar-settings-btn');
-  const settingsModal      = document.getElementById('settings-modal');
-  const settingsModalClose = document.getElementById('settings-modal-close');
+  const sidebarSettingsBackBtn = document.getElementById('sidebar-settings-back-btn');
+  const sidebarSessionsView = document.getElementById('sidebar-sessions-view');
+  const sidebarSettingsView = document.getElementById('sidebar-settings-view');
   const fileInput          = document.getElementById('file-input');
   const uploadBtn          = document.getElementById('upload-btn');
   const imagePreviews      = document.getElementById('image-previews');
 
-  // Settings modal open/close
-  if (sidebarSettingsBtn) {
+  // Sidebar Settings view transitions
+  if (sidebarSettingsBtn && sidebarSessionsView && sidebarSettingsView) {
     sidebarSettingsBtn.addEventListener('click', () => {
-      closeMobileSidebar();
-      settingsModal.classList.add('open');
+      sidebarSessionsView.classList.add('hidden');
+      sidebarSettingsView.classList.remove('hidden');
     });
   }
 
-  settingsModalClose.addEventListener('click', () => {
-    settingsModal.classList.remove('open');
-  });
-
-  settingsModal.addEventListener('click', e => {
-    if (e.target === settingsModal) settingsModal.classList.remove('open');
-  });
+  if (sidebarSettingsBackBtn && sidebarSessionsView && sidebarSettingsView) {
+    sidebarSettingsBackBtn.addEventListener('click', () => {
+      sidebarSettingsView.classList.add('hidden');
+      sidebarSessionsView.classList.remove('hidden');
+    });
+  }
 
   // Tool visibility preference (persistent)
   let showTools = true;
@@ -1589,7 +1640,6 @@
   }
 
   async function openPastConversation(convId) {
-    toast(`Opening AGY conversation ${convId.slice(0, 8)}…`, 'info');
     try {
       const res = await fetch(`${BASE_URL}/api/conversations/${convId}/open`, {
         method: 'POST',
@@ -1602,7 +1652,6 @@
         await fetchConversations();
         renderSessionTabs();
         connectSession(s.session_id);
-        toast(`Opened conversation: ${s.name || s.session_id}`, 'success');
       } else {
         toast(`Open error: ${s.error || 'unknown'}`, 'error');
       }
