@@ -1880,17 +1880,38 @@
       modelSelect.value = '';
     }
 
-    // Clear message container on switch
-    messagesEl.innerHTML = '';
-    emptyState.style.display = 'none';
+    // Load cached messages from localStorage for 0ms instantaneous display
+    let hadCache = false;
+    try {
+      const cached = localStorage.getItem(`awp_cache_messages_${sessionId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          messagesEl.innerHTML = '';
+          emptyState.style.display = 'none';
+          appendMessage({ type: 'history', messages: parsed });
+          hadCache = true;
+        }
+      }
+    } catch(e){}
 
-    // Load history from REST endpoint immediately so content is visible without waiting for WS handshake
+    if (!hadCache) {
+      messagesEl.innerHTML = '';
+      emptyState.style.display = 'none';
+    }
+
+    // Load history from REST endpoint to sync any updates that occurred offline
     try {
       const res = await fetch(`${BASE_URL}/api/sessions/${sessionId}/history`);
       if (res.ok) {
         const data = await res.json();
         if (data.messages && data.messages.length > 0) {
+          messagesEl.innerHTML = '';
+          emptyState.style.display = 'none';
           appendMessage({ type: 'history', messages: data.messages });
+          try {
+            localStorage.setItem(`awp_cache_messages_${sessionId}`, JSON.stringify(data.messages));
+          } catch(e){}
         }
       }
     } catch (e) {
@@ -1919,6 +1940,9 @@
         messagesEl.innerHTML = '';
         emptyState.style.display = 'none';
         appendMessage(msg);
+        try {
+          localStorage.setItem(`awp_cache_messages_${sessionId}`, JSON.stringify(msg.messages || []));
+        } catch(e){}
         return;
       }
 
@@ -1927,6 +1951,14 @@
         setThinking(false);
       }
       appendMessage(msg);
+
+      // Append new message to local cached array
+      try {
+        const cached = localStorage.getItem(`awp_cache_messages_${sessionId}`);
+        const list = cached ? JSON.parse(cached) : [];
+        list.push(msg);
+        localStorage.setItem(`awp_cache_messages_${sessionId}`, JSON.stringify(list));
+      } catch(e){}
     };
 
     ws.onclose = () => {
@@ -2087,9 +2119,26 @@
 
   // ── Init ───────────────────────────────────────────────────────────────
   (async () => {
-    await Promise.all([loadModels(), fetchSessions(), fetchConversations()]);
     let savedId = null;
     try { savedId = localStorage.getItem('awp_last_session_id'); } catch(e){}
+
+    // Pre-render cached messages instantly if available so user sees chat immediately
+    if (savedId) {
+      try {
+        const cached = localStorage.getItem(`awp_cache_messages_${savedId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            emptyState.style.display = 'none';
+            appendMessage({ type: 'history', messages: parsed });
+            sessionIdLabel.textContent = `#${savedId}`;
+            setStatus('connecting', 'Connecting…');
+          }
+        }
+      } catch(e){}
+    }
+
+    await Promise.all([loadModels(), fetchSessions(), fetchConversations()]);
 
     if (savedId && sessions[savedId]) {
       connectSession(savedId);
