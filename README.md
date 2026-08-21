@@ -89,10 +89,14 @@ AGY_PROXY_PORT=8080 AGY_WORKSPACE=/home/user/projects ./start.sh
 
 ---
 
-## 🛡 Security & Privacy
+## ⚠️ Security Warning & Privacy
 
-- All sessions and data stay **strictly on your local machine / network**.
-- Uploads and active session states are excluded from version control.
+> [!CAUTION]
+> **DO NOT EXPOSE AGY RELAY TO THE PUBLIC INTERNET OR FORWARD PORT 7788 ON YOUR ROUTER.**
+
+- **No Authentication / Encryption**: AGY Relay is designed strictly as an internal development companion for your **trusted local network / Wi-Fi only** (or secure VPN like Tailscale / WireGuard).
+- **Direct Shell & Code Access**: Because AGY executes system commands and file edits on your host machine, exposing this proxy to the public internet without an authentication layer would allow anyone with your IP to execute arbitrary code on your computer.
+- **Local Isolation**: All chats, history, and uploaded images stay strictly stored on your local disk. Nothing is transmitted to third-party telemetry servers.
 
 ---
 
