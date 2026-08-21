@@ -1520,9 +1520,6 @@
       return;
     }
 
-    // Output responses from AGY clear the thinking indicator
-    if (type === 'output') setThinking(false);
-
     const isUser = type === 'user';
     const groupClass = isUser ? 'user' : 'agent';
 
@@ -2116,8 +2113,8 @@
         return;
       }
 
-      // Clear thinking on final agent text output
-      if (msg.type === 'output' || msg.type === 'error') {
+      // Clear thinking ONLY when turn is completely finished or on fatal error
+      if (msg.type === 'done' || msg.type === 'error') {
         setThinking(false);
       }
       appendMessage(msg);
