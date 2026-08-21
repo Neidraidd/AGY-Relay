@@ -431,15 +431,19 @@
       min-height: 0;
       display: flex;
       flex-direction: column;
+      align-items: center;
       overflow: hidden;
+      width: 100%;
     }
 
     #messages {
       flex: 1;
       min-height: 0;
+      width: 100%;
+      max-width: 75%;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding: 14px 12px;
+      padding: 14px 16px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -557,25 +561,28 @@
     #empty-state h2 { font-size: 16px; color: var(--text-2); }
     #empty-state p { font-size: 12px; max-width: 320px; line-height: 1.5; }
 
-    /* ── Thinking indicator ──────────────────────────────────────────── */
+    /* ── Thinking indicator ─────────────────────────────────────────── */
     #thinking-indicator {
       display: none;
       align-items: center;
       gap: 8px;
-      padding: 4px 12px 6px;
+      padding: 8px 16px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      width: 100%;
+      max-width: 75%;
+      margin: 0 auto;
+      border-radius: var(--radius) var(--radius) 0 0;
       flex-shrink: 0;
     }
     #thinking-indicator.visible { display: flex; }
-
-    .thinking-dots {
-      display: flex;
-      gap: 4px;
-    }
+    .thinking-dots { display: flex; gap: 4px; }
     .thinking-dots span {
-      width: 6px; height: 6px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: var(--accent2);
-      animation: bounce 1.2s infinite;
+      background: var(--accent);
+      animation: bounce 1.2s infinite ease-in-out;
     }
     .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
     .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
@@ -590,6 +597,16 @@
       border-top: 1px solid var(--border);
       background: var(--bg);
       flex-shrink: 0;
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .input-inner {
+      width: 100%;
+      max-width: 75%;
+      display: flex;
+      flex-direction: column;
     }
 
     #input-form {
@@ -601,6 +618,7 @@
       border-radius: var(--radius);
       padding: 8px 10px;
       transition: var(--transition);
+      width: 100%;
     }
     #input-form:focus-within {
       border-color: var(--border-glow);
@@ -792,14 +810,14 @@
       #messages {
         padding: 8px 6px;
         gap: 6px;
+        max-width: 100%;
       }
-      .msg-group {
-        max-width: 96%;
+      .input-inner {
+        max-width: 100%;
       }
-      .bubble {
-        font-size: 13px;
-        padding: 8px 10px;
-        line-height: 1.45;
+      #thinking-indicator {
+        max-width: 100%;
+        border-radius: 0;
       }
       #input-area {
         padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
@@ -1141,26 +1159,28 @@
 
       <!-- Input area (fixed at bottom of chat container) -->
       <div id="input-area">
-        <!-- Image previews strip -->
-        <div id="image-previews"></div>
-        <div id="workspace-label">
-          <span>Workspace:</span><code id="workspace-path">—</code>
-          <span style="margin-left:auto;color:var(--text-3)" id="session-id-label"></span>
-        </div>
-        <div style="height:6px"></div>
-        <div id="input-form">
-          <textarea
-            id="message-input"
-            rows="1"
-            placeholder="Send a message to AGY… (Enter to send, Shift+Enter for newline)"
-            autocomplete="off"
-            spellcheck="true"
-          ></textarea>
-          <div class="input-actions">
-            <input type="file" id="file-input" accept="image/*" multiple />
-            <button id="upload-btn" title="Attach image">🖼</button>
-            <button id="interrupt-btn" title="Send Ctrl+C (interrupt)">⏹</button>
-            <button id="send-btn">Send ↵</button>
+        <div class="input-inner">
+          <!-- Image previews strip -->
+          <div id="image-previews"></div>
+          <div id="workspace-label">
+            <span>Workspace:</span><code id="workspace-path">—</code>
+            <span style="margin-left:auto;color:var(--text-3)" id="session-id-label"></span>
+          </div>
+          <div style="height:6px"></div>
+          <div id="input-form">
+            <textarea
+              id="message-input"
+              rows="1"
+              placeholder="Send a message to AGY… (Enter to send, Shift+Enter for newline)"
+              autocomplete="off"
+              spellcheck="true"
+            ></textarea>
+            <div class="input-actions">
+              <input type="file" id="file-input" accept="image/*" multiple />
+              <button id="upload-btn" title="Attach image">🖼</button>
+              <button id="interrupt-btn" title="Send Ctrl+C (interrupt)">⏹</button>
+              <button id="send-btn">Send ↵</button>
+            </div>
           </div>
         </div>
       </div>
