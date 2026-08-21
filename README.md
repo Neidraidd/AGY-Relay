@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-vA202608.01-blue.svg)](https://github.com/Neidraidd/AGY-Relay)
 [![Status](https://img.shields.io/badge/status-in--development-orange.svg)](https://github.com/Neidraidd/AGY-Relay)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 > **Fast, responsive web & mobile companion interface for Google Antigravity (AGY).**
 
@@ -102,4 +102,4 @@ AGY_PROXY_PORT=8080 AGY_WORKSPACE=/home/user/projects ./start.sh
 
 ## 📄 License
 
-MIT License © 2026 Neidraidd.
+GNU General Public License v3.0 (GPLv3) © 2026 Neidraidd. See [LICENSE](LICENSE) for details.
