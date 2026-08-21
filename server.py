@@ -66,7 +66,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="202608.0001")
+app = FastAPI(title="AGY Relay", version="v202608.0002")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
