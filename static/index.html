@@ -21,10 +21,11 @@
       --bg3:          #21262d;
       --surface:      #1c2128;
       --border:       #30363d;
-      --border-glow:  rgba(88, 166, 255, 0.4);
+      --border-glow:  rgba(249, 115, 22, 0.4);
 
-      --accent:       #58a6ff;
-      --accent2:      #a371f7;
+      --accent:       #f97316;
+      --accent-rgb:   249, 115, 22;
+      --accent2:      #fb923c;
       --accent3:      #3fb950;
       --accent-err:   #f85149;
       --accent-warn:  #d29922;
@@ -33,16 +34,17 @@
       --text-2:       #8b949e;
       --text-3:       #484f58;
 
-      --user-bubble:  linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+      --user-bubble:  linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
       --ai-bubble:    #1c2128;
 
       --radius:       14px;
       --radius-sm:    8px;
       --font-mono:    'JetBrains Mono', monospace;
       --font-ui:      'Inter', system-ui, -apple-system, sans-serif;
-      --shadow-glow:  0 0 30px rgba(88,166,255,0.12);
+      --shadow-glow:  0 0 30px rgba(249, 115, 22, 0.15);
       --transition:   0.2s cubic-bezier(0.4,0,0.2,1);
       --app-height:   100vh;
+      --chat-max-width: 50%;
     }
 
     html, body {
@@ -440,7 +442,7 @@
       flex: 1;
       min-height: 0;
       width: 100%;
-      max-width: 50%;
+      max-width: var(--chat-max-width, 50%);
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding: 14px 16px;
@@ -570,7 +572,7 @@
       background: var(--bg2);
       border-top: 1px solid var(--border);
       width: 100%;
-      max-width: 50%;
+      max-width: var(--chat-max-width, 50%);
       margin: 0 auto;
       border-radius: var(--radius) var(--radius) 0 0;
       flex-shrink: 0;
@@ -604,7 +606,7 @@
 
     .input-inner {
       width: 100%;
-      max-width: 50%;
+      max-width: var(--chat-max-width, 50%);
       display: flex;
       flex-direction: column;
     }
@@ -1055,10 +1057,36 @@
       color: var(--text-primary);
       transition: var(--transition);
     }
-    .settings-toggle-btn.active {
-      border-color: var(--accent);
-      background: rgba(88,166,255,0.15);
-      color: var(--accent);
+    .settings-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-3);
+      margin: 8px 0 2px;
+    }
+    .color-swatches {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .color-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .color-swatch:hover {
+      transform: scale(1.15);
+    }
+    .color-swatch.active {
+      border-color: #ffffff;
+      box-shadow: 0 0 8px var(--accent);
     }
     #settings-btn {
       display: flex;
@@ -1196,6 +1224,7 @@
       <span class="modal-close" id="settings-modal-close">✕</span>
     </div>
     <div class="modal-body">
+      <div class="settings-section-title">General</div>
       <div class="settings-row">
         <div class="settings-row-info">
           <span class="settings-row-title">Active Model</span>
@@ -1212,6 +1241,36 @@
           <span class="settings-row-desc">Show or hide background commands & tool executions</span>
         </div>
         <button id="toggle-tools-btn" class="settings-toggle-btn active">Tools: ON</button>
+      </div>
+
+      <div class="settings-section-title" style="margin-top:14px">Appearance</div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <span class="settings-row-title">Chat Max Width</span>
+          <span class="settings-row-desc">Adjust conversation width on desktop displays</span>
+        </div>
+        <select id="chat-width-select" class="settings-select">
+          <option value="50%">50% (Default)</option>
+          <option value="65%">65%</option>
+          <option value="75%">75%</option>
+          <option value="90%">90%</option>
+          <option value="100%">100% (Full)</option>
+        </select>
+      </div>
+
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <span class="settings-row-title">Accent Theme</span>
+          <span class="settings-row-desc">Customize UI glow, buttons, and highlight color</span>
+        </div>
+        <div class="color-swatches" id="color-swatches">
+          <div class="color-swatch active" data-color="orange" style="background:#f97316" title="Orange (Default)"></div>
+          <div class="color-swatch" data-color="blue" style="background:#58a6ff" title="Blue"></div>
+          <div class="color-swatch" data-color="purple" style="background:#a855f7" title="Purple"></div>
+          <div class="color-swatch" data-color="emerald" style="background:#10b981" title="Emerald"></div>
+          <div class="color-swatch" data-color="rose" style="background:#f43f5e" title="Rose"></div>
+          <div class="color-swatch" data-color="amber" style="background:#f59e0b" title="Amber"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1296,6 +1355,97 @@
     try { localStorage.setItem('awp_show_tools', showTools); } catch(e){}
     updateToolsVisibility();
     toast(showTools ? 'Tool execution steps visible' : 'Tool execution steps hidden', 'info');
+  });
+
+  // ── Appearance preferences (Chat Width & Accent Color) ───────────────────
+  const chatWidthSelect = document.getElementById('chat-width-select');
+  const colorSwatches   = document.querySelectorAll('.color-swatch');
+
+  const THEMES = {
+    orange: {
+      accent: '#f97316',
+      accent2: '#fb923c',
+      rgb: '249, 115, 22',
+      bubble: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)'
+    },
+    blue: {
+      accent: '#58a6ff',
+      accent2: '#79c0ff',
+      rgb: '88, 166, 255',
+      bubble: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)'
+    },
+    purple: {
+      accent: '#a855f7',
+      accent2: '#c084fc',
+      rgb: '168, 85, 247',
+      bubble: 'linear-gradient(135deg, #7e22ce 0%, #9333ea 100%)'
+    },
+    emerald: {
+      accent: '#10b981',
+      accent2: '#34d399',
+      rgb: '16, 185, 129',
+      bubble: 'linear-gradient(135deg, #047857 0%, #059669 100%)'
+    },
+    rose: {
+      accent: '#f43f5e',
+      accent2: '#fb7185',
+      rgb: '244, 63, 94',
+      bubble: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)'
+    },
+    amber: {
+      accent: '#f59e0b',
+      accent2: '#fbbf24',
+      rgb: '245, 158, 11',
+      bubble: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)'
+    }
+  };
+
+  function applyChatWidth(width) {
+    document.documentElement.style.setProperty('--chat-max-width', width);
+    if (chatWidthSelect) chatWidthSelect.value = width;
+  }
+
+  function applyAccentColor(colorKey) {
+    const theme = THEMES[colorKey] || THEMES.orange;
+    document.documentElement.style.setProperty('--accent', theme.accent);
+    document.documentElement.style.setProperty('--accent2', theme.accent2);
+    document.documentElement.style.setProperty('--accent-rgb', theme.rgb);
+    document.documentElement.style.setProperty('--border-glow', `rgba(${theme.rgb}, 0.4)`);
+    document.documentElement.style.setProperty('--shadow-glow', `0 0 30px rgba(${theme.rgb}, 0.15)`);
+    document.documentElement.style.setProperty('--user-bubble', theme.bubble);
+
+    colorSwatches.forEach(swatch => {
+      swatch.classList.toggle('active', swatch.dataset.color === colorKey);
+    });
+  }
+
+  // Load saved appearance
+  let savedWidth = '50%';
+  let savedColor = 'orange';
+  try {
+    savedWidth = localStorage.getItem('awp_chat_width') || '50%';
+    savedColor = localStorage.getItem('awp_accent_color') || 'orange';
+  } catch(e){}
+
+  applyChatWidth(savedWidth);
+  applyAccentColor(savedColor);
+
+  if (chatWidthSelect) {
+    chatWidthSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      applyChatWidth(val);
+      try { localStorage.setItem('awp_chat_width', val); } catch(e){}
+      toast(`Chat width set to ${val}`, 'info');
+    });
+  }
+
+  colorSwatches.forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      const colorKey = swatch.dataset.color;
+      applyAccentColor(colorKey);
+      try { localStorage.setItem('awp_accent_color', colorKey); } catch(e){}
+      toast(`Theme set to ${colorKey.charAt(0).toUpperCase() + colorKey.slice(1)}`, 'info');
+    });
   });
 
   updateToolsVisibility();
