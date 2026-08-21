@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0003")
+app = FastAPI(title="AGY Relay", version="v202608.0004")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -996,6 +996,28 @@ async def list_artifacts():
                     "created_at": path.stat().st_mtime,
                 })
     return {"artifacts": sorted(items, key=lambda x: x.get("created_at", 0), reverse=True)}
+
+
+@app.get("/api/mcp")
+async def list_mcp():
+    """List connected MCP servers and tools"""
+    try:
+        r = subprocess.run([AGY_BIN, "mcp", "list"], capture_output=True, text=True, timeout=10)
+        output = (r.stdout or "").strip() or (r.stderr or "").strip() or "No MCP servers configured."
+        return {"ok": True, "output": output}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@app.get("/api/changelog")
+async def get_changelog():
+    """Get latest AGY release notes and changelog"""
+    try:
+        r = subprocess.run([AGY_BIN, "changelog"], capture_output=True, text=True, timeout=10)
+        output = (r.stdout or "").strip() or "No changelog available."
+        return {"ok": True, "changelog": output}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
