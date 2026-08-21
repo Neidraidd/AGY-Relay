@@ -600,6 +600,7 @@
       cursor: default;
     }
 
+    #messages.hide-tools .tool-group,
     #messages.hide-tools .bubble.tool {
       display: none !important;
     }
@@ -647,34 +648,40 @@
     #empty-state h2 { font-size: 16px; color: var(--text-2); }
     #empty-state p { font-size: 12px; max-width: 320px; line-height: 1.5; }
 
-    /* ── Thinking indicator ─────────────────────────────────────────── */
-    #thinking-indicator {
-      display: none;
+    /* ── Inline Thinking indicator (at bottom of chat) ───────────────── */
+    .thinking-group {
+      align-self: flex-start;
+      margin-top: 4px;
+      margin-bottom: 6px;
+      display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: var(--bg2);
-      border-top: 1px solid var(--border);
-      width: 100%;
-      max-width: var(--chat-max-width, 50%);
-      margin: 0 auto;
-      border-radius: var(--radius) var(--radius) 0 0;
-      flex-shrink: 0;
+      animation: msgIn 0.2s cubic-bezier(0.4,0,0.2,1);
     }
-    #thinking-indicator.visible { display: flex; }
-    .thinking-dots { display: flex; gap: 4px; }
+    .thinking-bubble {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius);
+    }
+    .thinking-dots {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
     .thinking-dots span {
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: var(--accent);
-      animation: bounce 1.2s infinite ease-in-out;
+      animation: thinkingBounce 1.2s infinite ease-in-out;
     }
     .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
     .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce {
-      0%,80%,100% { transform:scale(0.6); opacity:0.3; }
-      40% { transform:scale(1); opacity:1; }
+    @keyframes thinkingBounce {
+      0%, 80%, 100% { transform: scale(0.65); opacity: 0.35; }
+      40% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 5px var(--accent)); }
     }
 
     /* ── Input area (Claude Code style prompt) ───────────────────────── */
@@ -1273,7 +1280,7 @@
   <!-- Header -->
   <header>
     <div class="logo">
-      <div class="logo-icon" id="logo-sidebar-toggle-btn" title="Toggle Sessions Sidebar">⚡</div>
+      <div class="logo-icon" id="logo-sidebar-toggle-btn" title="Open Sessions (☰)" style="font-size:18px;font-weight:bold;color:#000">☰</div>
       <div class="logo-text">
         <h1>AGY Relay</h1>
         <p>Antigravity Remote Companion</p>
@@ -1397,17 +1404,15 @@
         <div id="messages">
           <div id="empty-state">
             <div class="icon">🤖</div>
-            <h2>No session active</h2>
-            <p>Create a new session or connect to an existing one from the left sidebar to start chatting with AGY.</p>
+            <h2>Welcome to AGY Relay</h2>
+            <p>Select a past conversation or start a new session to pair program with AGY.</p>
+            <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center">
+              <button id="empty-sidebar-btn" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px">☰ View Sessions</button>
+              <button id="empty-new-btn" style="background:var(--accent);border:none;color:#000;font-weight:600;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px">＋ New Session</button>
+            </div>
           </div>
         </div>
         <button id="scroll-btn" title="Scroll to bottom">↓ Jump to latest</button>
-      </div>
-
-      <!-- Thinking indicator -->
-      <div id="thinking-indicator">
-        <div class="thinking-dots"><span></span><span></span><span></span></div>
-        <span style="font-size:12px;color:var(--text-3)">AGY is thinking…</span>
       </div>
 
       <!-- Input area (fixed at bottom of chat container) -->
@@ -1499,7 +1504,6 @@
   const interruptBtn       = document.getElementById('interrupt-btn');
   const statusDot          = document.getElementById('status-dot');
   const statusDotContainer = document.getElementById('status-dot-container');
-  const thinkingEl         = document.getElementById('thinking-indicator');
   const scrollBtn          = document.getElementById('scroll-btn');
   const workspacePath      = document.getElementById('workspace-path');
   const sessionIdLabel     = document.getElementById('session-id-label');
@@ -1511,7 +1515,6 @@
   const sidebarSessionsView = document.getElementById('sidebar-sessions-view');
   const sidebarSettingsView = document.getElementById('sidebar-settings-view');
   const fileInput          = document.getElementById('file-input');
-  const uploadBtn          = document.getElementById('upload-btn');
   const imagePreviews      = document.getElementById('image-previews');
 
   // ── Prompt Toolbar DOM refs ─────────────────────────────────────────────
@@ -1520,6 +1523,7 @@
   const toolbarModelSelect     = document.getElementById('toolbar-model-select');
   const toolbarModelLabel      = document.getElementById('toolbar-model-label');
   const toolbarAttachBtn       = document.getElementById('toolbar-attach-btn');
+  const toolbarNewChatBtn      = document.getElementById('toolbar-new-chat-btn');
 
   // Prompt Toolbar Event Listeners
   if (toolbarModeSelect) {
@@ -1726,11 +1730,34 @@
     }
   }
 
+  let inlineThinkingEl = null;
+
   function setThinking(val) {
     isThinking = val;
-    thinkingEl.classList.toggle('visible', val);
     if (interruptBtn) {
       interruptBtn.classList.toggle('visible', val);
+    }
+
+    if (val) {
+      if (!inlineThinkingEl) {
+        inlineThinkingEl = document.createElement('div');
+        inlineThinkingEl.id = 'inline-thinking';
+        inlineThinkingEl.className = 'msg-group agent thinking-group';
+        inlineThinkingEl.innerHTML = `
+          <div class="thinking-bubble">
+            <div class="thinking-dots"><span></span><span></span><span></span></div>
+          </div>
+        `;
+      }
+      if (!messagesEl.contains(inlineThinkingEl)) {
+        messagesEl.appendChild(inlineThinkingEl);
+        scrollToBottom();
+      }
+    } else {
+      if (inlineThinkingEl && inlineThinkingEl.parentNode) {
+        inlineThinkingEl.parentNode.removeChild(inlineThinkingEl);
+      }
+      inlineThinkingEl = null;
     }
   }
 
@@ -1744,6 +1771,12 @@
   function appendMessage(msg) {
     // Hide empty state
     emptyState.style.display = 'none';
+
+    // Remove inline thinking indicator before appending new messages
+    if (inlineThinkingEl && inlineThinkingEl.parentNode) {
+      inlineThinkingEl.parentNode.removeChild(inlineThinkingEl);
+      inlineThinkingEl = null;
+    }
 
     if (msg.type === 'history') {
       // Bulk insert history
@@ -1768,15 +1801,35 @@
       return;
     }
 
+    // Tool execution pills: compact and without premature agent timestamp header
+    if (type === 'tool') {
+      const el = document.createElement('div');
+      el.className = 'bubble tool';
+      el.textContent = msg.text;
+
+      const lastGroup = messagesEl.lastElementChild;
+      if (lastGroup && lastGroup.classList.contains('msg-group') && lastGroup.classList.contains('agent') && !lastGroup.classList.contains('thinking-group')) {
+        lastGroup.appendChild(el);
+      } else {
+        const group = document.createElement('div');
+        group.className = 'msg-group agent tool-group';
+        group.appendChild(el);
+        messagesEl.appendChild(group);
+      }
+      return;
+    }
+
     const isUser = type === 'user';
     const groupClass = isUser ? 'user' : 'agent';
 
-    // Collapse consecutive same-side messages into one group
+    // Collapse consecutive same-side messages into one group (only if not a pure tool group)
     const lastGroup = messagesEl.lastElementChild;
     if (
       lastGroup &&
       lastGroup.classList.contains('msg-group') &&
       lastGroup.classList.contains(groupClass) &&
+      !lastGroup.classList.contains('tool-group') &&
+      !lastGroup.classList.contains('thinking-group') &&
       !isUser
     ) {
       const bubble = document.createElement('div');
@@ -1787,7 +1840,7 @@
       return;
     }
 
-    // New group
+    // New group with label & timestamp (only created when actual user or AGY message arrives)
     const group = document.createElement('div');
     group.className = `msg-group ${groupClass}`;
 
@@ -1861,10 +1914,6 @@
   }
 
   // ── Image upload ───────────────────────────────────────────────────────
-  if (uploadBtn && fileInput) {
-    uploadBtn.addEventListener('click', () => fileInput.click());
-  }
-
   if (fileInput) {
     fileInput.addEventListener('change', async () => {
       if (!currentSessionId) { toast('Start a session first', 'error'); return; }
@@ -2051,6 +2100,20 @@
     closeMobileSidebar();
     createSession();
   });
+
+  const emptySidebarBtn = document.getElementById('empty-sidebar-btn');
+  if (emptySidebarBtn) {
+    emptySidebarBtn.addEventListener('click', () => {
+      openMobileSidebar();
+    });
+  }
+
+  const emptyNewBtn = document.getElementById('empty-new-btn');
+  if (emptyNewBtn) {
+    emptyNewBtn.addEventListener('click', () => {
+      createSession();
+    });
+  }
 
   // Swipe gestures for opening/closing sidebar on mobile
   let touchStartX = 0;
