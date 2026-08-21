@@ -22,6 +22,7 @@
   <meta name="apple-mobile-web-app-title" content="AGY Relay" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+  <script src="/static/marked.min.js"></script>
   <style>
     /* ── Reset & tokens ───────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -583,6 +584,101 @@
       color: var(--text-primary);
       width: 100%;
       font-size: 14px;
+      line-height: 1.65;
+      white-space: normal;
+    }
+
+    .bubble.output h1, .bubble.output h2, .bubble.output h3, .bubble.output h4 {
+      color: var(--text-primary);
+      margin: 12px 0 6px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .bubble.output h1 { font-size: 17px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+    .bubble.output h2 { font-size: 15.5px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 3px; }
+    .bubble.output h3 { font-size: 14px; }
+    .bubble.output h4 { font-size: 13.5px; }
+
+    .bubble.output p {
+      margin: 6px 0;
+      line-height: 1.6;
+    }
+
+    .bubble.output ul, .bubble.output ol {
+      margin: 6px 0 6px 20px;
+      padding: 0;
+    }
+    .bubble.output li {
+      margin: 3px 0;
+      line-height: 1.55;
+    }
+
+    .bubble.output code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent2);
+    }
+
+    .bubble.output pre {
+      margin: 10px 0;
+      padding: 12px 14px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .bubble.output pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: var(--text-primary);
+      white-space: pre;
+    }
+
+    .bubble.output blockquote {
+      margin: 8px 0;
+      padding: 4px 12px;
+      border-left: 3px solid var(--accent);
+      background: rgba(249, 115, 22, 0.06);
+      color: var(--text-2);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .bubble.output hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 14px 0;
+    }
+
+    .bubble.output table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 12.5px;
+    }
+    .bubble.output th, .bubble.output td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .bubble.output th {
+      background: var(--bg3);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .bubble.output a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
 
     .bubble.tool {
@@ -1762,14 +1858,30 @@
     }
   }
 
+  // ── Markdown rendering helper ───────────────────────────────────────────
+  function renderMarkdown(text) {
+    if (!text) return '';
+    if (typeof marked !== 'undefined' && (marked.parse || typeof marked === 'function')) {
+      try {
+        const fn = marked.parse || marked;
+        return fn(text, { breaks: true, gfm: true });
+      } catch(e) {
+        console.warn('Markdown parse error:', e);
+      }
+    }
+    return escapeHtml(text);
+  }
+
   // ── Message rendering ──────────────────────────────────────────────────
   function appendMessage(msg) {
     // Hide empty state
     emptyState.style.display = 'none';
 
-    // Remove inline thinking indicator before appending new messages
-    if (inlineThinkingEl && inlineThinkingEl.parentNode) {
-      inlineThinkingEl.parentNode.removeChild(inlineThinkingEl);
+    // ONLY remove inline thinking indicator when an actual response/error message or turn done arrives
+    if (msg.type === 'output' || msg.type === 'error' || msg.type === 'done') {
+      if (inlineThinkingEl && inlineThinkingEl.parentNode) {
+        inlineThinkingEl.parentNode.removeChild(inlineThinkingEl);
+      }
       inlineThinkingEl = null;
     }
 
@@ -1780,7 +1892,14 @@
       messagesEl.scrollTop = messagesEl.scrollHeight;
       return;
     }
+
     appendSingleMessage(msg);
+
+    // Keep the inline 3-dot thinking indicator pinned at the very bottom while agent is working
+    if (isThinking && inlineThinkingEl && (msg.type === 'tool' || msg.type === 'user')) {
+      messagesEl.appendChild(inlineThinkingEl);
+    }
+
     scrollToBottom();
   }
 
@@ -1829,7 +1948,7 @@
     ) {
       const bubble = document.createElement('div');
       bubble.className = `bubble ${type}`;
-      bubble.textContent = msg.text;
+      bubble.innerHTML = renderMarkdown(msg.text);
       lastGroup.appendChild(bubble);
       scrollToBottom();
       return;
@@ -1848,7 +1967,11 @@
 
     const bubble = document.createElement('div');
     bubble.className = `bubble ${type}`;
-    bubble.textContent = msg.text;
+    if (isUser) {
+      bubble.textContent = msg.text;
+    } else {
+      bubble.innerHTML = renderMarkdown(msg.text);
+    }
     group.appendChild(bubble);
 
     messagesEl.appendChild(group);
