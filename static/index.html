@@ -3,6 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <script>
+    // Nuke stale service workers immediately on load
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
+      if ('caches' in window) {
+        caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+      }
+    }
+  </script>
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#0d1117" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -47,11 +58,27 @@
       --chat-max-width: 50%;
     }
 
-    html, body {
+    html {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    body {
       height: 100%;
       height: 100dvh;
       width: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
       font-family: var(--font-ui);
       background: var(--bg);
       color: var(--text-primary);
@@ -67,8 +94,14 @@
       width: 100%;
       max-width: 100%;
       margin: 0;
+      padding: 0;
       overflow: hidden;
-      position: relative;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overscroll-behavior: none;
     }
 
     /* ── Header ─────────────────────────────────────────────────────── */
@@ -461,6 +494,7 @@
       min-width: 0;
       min-height: 0;
       overflow: hidden;
+      overscroll-behavior: none;
     }
 
     .messages-area {
@@ -472,6 +506,8 @@
       align-items: center;
       overflow: hidden;
       width: 100%;
+      overscroll-behavior: none;
+      touch-action: pan-y;
     }
 
     #messages {
@@ -480,7 +516,9 @@
       width: 100%;
       max-width: var(--chat-max-width, 50%);
       overflow-y: auto;
+      overscroll-behavior-y: contain;
       -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
       padding: 14px 16px;
       display: flex;
       flex-direction: column;
@@ -641,12 +679,15 @@
 
     /* ── Input area (Claude Code style prompt) ───────────────────────── */
     #input-area {
-      padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
-      background: transparent;
+      padding: 8px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+      background: var(--bg);
       flex-shrink: 0;
       display: flex;
       justify-content: center;
       width: 100%;
+      z-index: 50;
+      position: relative;
+      border-top: 1px solid rgba(255,255,255,0.05);
     }
 
     .input-inner {
@@ -664,7 +705,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 10px 12px;
+      padding: 8px 10px;
       transition: var(--transition);
       width: 100%;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
@@ -686,14 +727,16 @@
       resize: none;
       max-height: 160px;
       min-height: 26px;
+      padding: 3px 2px;
     }
     #message-input::placeholder { color: var(--text-3); }
 
     .input-actions {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       flex-shrink: 0;
+      padding-bottom: 1px;
     }
 
     #interrupt-btn {
@@ -702,17 +745,53 @@
       justify-content: center;
       width: 32px;
       height: 32px;
+      min-width: 32px;
       border: 1px solid rgba(248,81,73,0.4);
-      border-radius: var(--radius-sm);
+      border-radius: 8px;
       background: rgba(248,81,73,0.15);
       color: var(--accent-err);
       cursor: pointer;
       transition: var(--transition);
       font-size: 13px;
       flex-shrink: 0;
+      padding: 0;
     }
     #interrupt-btn.visible { display: flex; }
     #interrupt-btn:hover { background: rgba(248,81,73,0.25); border-color: var(--accent-err); }
+
+    /* ── Modern Send Button ──────────────────────────────────────────── */
+    #send-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      color: #ffffff;
+      cursor: pointer;
+      transition: var(--transition);
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.35);
+      padding: 0;
+    }
+    #send-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.12);
+      box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.5);
+    }
+    #send-btn:active {
+      transform: translateY(0);
+    }
+    #send-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+      filter: grayscale(0.5);
+    }
 
     /* ── Claude Code Bottom Status Bar ───────────────────────────────── */
     .prompt-toolbar {
@@ -755,58 +834,6 @@
       opacity: 0;
       cursor: pointer;
     }
-    .usage-ring-container {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: help;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-3);
-    }
-    .usage-ring {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      border: 2px solid var(--accent);
-      display: inline-block;
-      position: relative;
-      box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.4);
-    }
-
-    /* ── Sidebar (workspace info) ────────────────────────────────────── */
-    #workspace-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      color: var(--text-3);
-      padding: 0 2px 2px;
-      font-family: var(--font-mono);
-    }
-
-    #send-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      padding: 0 14px;
-      height: 36px;
-      border: none;
-      border-radius: var(--radius-sm);
-      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-      color: white;
-      font-family: var(--font-ui);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    #send-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(88,166,255,0.3); }
-    #send-btn:active { transform: translateY(0); }
-    #send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
     /* ── Sidebar (workspace info) ────────────────────────────────────── */
     #workspace-label {
@@ -896,13 +923,16 @@
       display: none;
       align-items: center;
       gap: 6px;
-      transition: var(--transition);
+      transition: opacity 0.15s ease, transform 0.15s ease;
       z-index: 60;
       box-shadow: 0 4px 18px rgba(0,0,0,0.6), 0 0 14px rgba(88,166,255,0.5);
-      animation: msgIn 0.2s ease;
       user-select: none;
+      white-space: nowrap;
     }
-    #scroll-btn.visible { display: flex; }
+    #scroll-btn.visible {
+      display: flex;
+      animation: scrollBtnIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
     #scroll-btn:hover {
       transform: translateX(-50%) translateY(-2px);
       box-shadow: 0 6px 22px rgba(0,0,0,0.7), 0 0 18px rgba(88,166,255,0.7);
@@ -910,6 +940,17 @@
     }
     #scroll-btn:active {
       transform: translateX(-50%) translateY(0);
+    }
+
+    @keyframes scrollBtnIn {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(12px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+      }
     }
 
     /* ── Responsive Mobile First Adjustments ────────────────────────────────── */
@@ -1389,8 +1430,13 @@
             ></textarea>
             <div class="input-actions">
               <input type="file" id="file-input" accept="image/*" multiple style="display:none" />
-              <button id="interrupt-btn" title="Stop AGY (Ctrl+C)">⏹</button>
-              <button id="send-btn">↵</button>
+              <button id="interrupt-btn" title="Stop AGY (Ctrl+C)" type="button">⏹</button>
+              <button id="send-btn" title="Send message (Enter)" aria-label="Send" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="19" x2="12" y2="5"></line>
+                  <polyline points="5 12 12 5 19 12"></polyline>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -1407,28 +1453,20 @@
                 </select>
               </div>
 
-              <!-- Model selector (on left) -->
+              <!-- Model selector -->
               <div class="toolbar-item toolbar-select-wrapper" title="Active Model">
                 <span id="toolbar-model-label">Auto Model</span>
                 <select id="toolbar-model-select">
                   <option value="">(default)</option>
                 </select>
               </div>
-
-              <!-- Thinking Effort selector (Low / Medium / High) -->
-              <div class="toolbar-item toolbar-select-wrapper" title="Reasoning / Thinking Effort">
-                <span id="toolbar-effort-label">High</span>
-                <select id="toolbar-effort-select">
-                  <option value="high" selected>High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-              </div>
             </div>
 
             <div class="prompt-toolbar-right">
-              <!-- Extra action plus moved to far right -->
-              <div class="toolbar-item" id="toolbar-new-chat-btn" title="New Session">＋</div>
+              <!-- Attachment button on bottom right -->
+              <div class="toolbar-item" id="toolbar-attach-btn" title="Attach image / file">
+                <span>📎</span> <span>Attach</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1459,7 +1497,6 @@
   const inputEl            = document.getElementById('message-input');
   const sendBtn            = document.getElementById('send-btn');
   const interruptBtn       = document.getElementById('interrupt-btn');
-  const clearBtn           = document.getElementById('clear-btn');
   const statusDot          = document.getElementById('status-dot');
   const statusDotContainer = document.getElementById('status-dot-container');
   const thinkingEl         = document.getElementById('thinking-indicator');
@@ -1482,12 +1519,7 @@
   const toolbarModeLabel       = document.getElementById('toolbar-mode-label');
   const toolbarModelSelect     = document.getElementById('toolbar-model-select');
   const toolbarModelLabel      = document.getElementById('toolbar-model-label');
-  const toolbarEffortSelect    = document.getElementById('toolbar-effort-select');
-  const toolbarEffortLabel     = document.getElementById('toolbar-effort-label');
-  const toolbarWorkspaceLabel  = document.getElementById('toolbar-workspace-label');
-  const toolbarNewChatBtn      = document.getElementById('toolbar-new-chat-btn');
-  const toolbarUsageRing       = document.getElementById('toolbar-usage-ring');
-  const toolbarUsageContainer  = document.getElementById('toolbar-usage-container');
+  const toolbarAttachBtn       = document.getElementById('toolbar-attach-btn');
 
   // Prompt Toolbar Event Listeners
   if (toolbarModeSelect) {
@@ -1517,16 +1549,9 @@
     });
   }
 
-  if (toolbarEffortSelect) {
-    toolbarEffortSelect.addEventListener('change', async () => {
-      const effortVal = toolbarEffortSelect.value;
-      toolbarEffortLabel.textContent = effortVal ? (effortVal.charAt(0).toUpperCase() + effortVal.slice(1)) : 'High';
-      if (currentSessionId) {
-        if (sessions[currentSessionId]) sessions[currentSessionId].effort = effortVal;
-        try {
-          await fetch(`${BASE_URL}/api/sessions/${currentSessionId}/change-effort?effort=${encodeURIComponent(effortVal)}`);
-        } catch(e){}
-      }
+  if (toolbarAttachBtn && fileInput) {
+    toolbarAttachBtn.addEventListener('click', () => {
+      fileInput.click();
     });
   }
 
@@ -1836,16 +1861,20 @@
   }
 
   // ── Image upload ───────────────────────────────────────────────────────
-  uploadBtn.addEventListener('click', () => fileInput.click());
+  if (uploadBtn && fileInput) {
+    uploadBtn.addEventListener('click', () => fileInput.click());
+  }
 
-  fileInput.addEventListener('change', async () => {
-    if (!currentSessionId) { toast('Start a session first', 'error'); return; }
-    const files = Array.from(fileInput.files);
-    for (const file of files) {
-      await addImagePreview(file);
-    }
-    fileInput.value = '';
-  });
+  if (fileInput) {
+    fileInput.addEventListener('change', async () => {
+      if (!currentSessionId) { toast('Start a session first', 'error'); return; }
+      const files = Array.from(fileInput.files);
+      for (const file of files) {
+        await addImagePreview(file);
+      }
+      fileInput.value = '';
+    });
+  }
 
   // Paste image from clipboard
   document.addEventListener('paste', async (e) => {
@@ -2075,6 +2104,7 @@
       const res = await fetch(`${BASE_URL}/api/conversations?limit=100&archived=false`);
       const data = await res.json();
       pastConversations = data.conversations || [];
+      renderSessionTabs();
     } catch (e) {
       console.warn('Could not fetch AGY conversations', e);
     }
@@ -2093,7 +2123,7 @@
     }
   }
 
-  async function archiveConversation(convId, archiveState = True) {
+  async function archiveConversation(convId, archiveState = true) {
     try {
       await fetch(`${BASE_URL}/api/conversations/${convId}/archive`, {
         method: 'POST',
@@ -2249,7 +2279,21 @@
 
   // ── WebSocket connection ───────────────────────────────────────────────
   async function connectSession(sessionId) {
-    if (ws) { ws.close(); ws = null; }
+    // Guard: don't kill an active or connecting WebSocket for the same session
+    if (ws && currentSessionId === sessionId &&
+        (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+      console.log('[AWP] WebSocket already active for session', sessionId, '- skipping reconnect');
+      return;
+    }
+
+    if (ws) {
+      ws.onclose = null;
+      ws.onerror = null;
+      ws.onmessage = null;
+      ws.onopen = null;
+      try { ws.close(); } catch(e){}
+      ws = null;
+    }
 
     currentSessionId = sessionId;
     try { localStorage.setItem('awp_last_session_id', sessionId); } catch(e){}
@@ -2279,18 +2323,6 @@
     const sessionMode = sessions[sessionId]?.mode || '';
     if (toolbarModeSelect) toolbarModeSelect.value = sessionMode;
     if (toolbarModeLabel) toolbarModeLabel.textContent = sessionMode ? (sessionMode.charAt(0).toUpperCase() + sessionMode.slice(1)) : 'Auto';
-
-    // Sync effort selector & toolbar
-    const sessionEffort = sessions[sessionId]?.effort || 'high';
-    if (toolbarEffortSelect) toolbarEffortSelect.value = sessionEffort;
-    if (toolbarEffortLabel) toolbarEffortLabel.textContent = sessionEffort.charAt(0).toUpperCase() + sessionEffort.slice(1);
-
-    // Sync workspace indicator in toolbar
-    if (toolbarWorkspaceLabel) {
-      const wsP = sessions[sessionId]?.workspace || '/home/echo';
-      const parts = wsP.split('/');
-      toolbarWorkspaceLabel.textContent = parts[parts.length - 1] || '~';
-    }
 
     // Load cached messages from localStorage for 0ms instantaneous display
     let hadCache = false;
@@ -2512,7 +2544,7 @@
   function setAppHeight() {
     const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     document.documentElement.style.setProperty('--app-height', `${vh}px`);
-    scrollToBottom();
+    if (window.scrollY !== 0) window.scrollTo(0, 0);
   }
 
   if (window.visualViewport) {
@@ -2523,12 +2555,19 @@
   window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 200));
   setAppHeight();
 
+  // Prevent dragging document into empty black void when touching outside scrollable areas
+  document.addEventListener('touchmove', (e) => {
+    if (!e.target.closest('#messages, #sidebar-sessions-view, #sidebar-settings-view, textarea, input, select')) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
   // Scroll to bottom when focusing input on mobile
   inputEl.addEventListener('focus', () => {
     setTimeout(() => {
       setAppHeight();
       scrollToBottom(true);
-    }, 300);
+    }, 150);
   });
 
   // ── Init ───────────────────────────────────────────────────────────────
@@ -2536,10 +2575,10 @@
     let savedId = null;
     try { savedId = localStorage.getItem('awp_last_session_id'); } catch(e){}
 
-    // Pre-render cached messages immediately if available
+    // Pre-render cached messages and connect immediately if saved session exists
     if (savedId) {
       currentSessionId = savedId;
-      sessionIdLabel.textContent = `#${savedId}`;
+      if (sessionIdLabel) sessionIdLabel.textContent = `#${savedId}`;
       setStatus('connecting', 'Connecting…');
 
       try {
@@ -2552,65 +2591,72 @@
           }
         }
       } catch(e){}
+
+      // Connect WebSocket right away
+      connectSession(savedId);
     }
 
+    // Fetch models, sessions, and past conversations in background
     try {
-      await Promise.all([loadModels(), fetchSessions(), fetchConversations()]);
+      await Promise.allSettled([loadModels(), fetchSessions(), fetchConversations()]);
     } catch(e) {
       console.warn('Metadata fetch warning:', e);
     }
 
-    // Connect to target session
-    if (savedId && sessions[savedId]) {
-      connectSession(savedId);
-    } else if (Object.keys(sessions).length > 0) {
-      // Connect to the first available active session
-      connectSession(Object.keys(sessions)[0]);
-    } else if (pastConversations.length > 0) {
-      // Or open the latest conversation
-      await openPastConversation(pastConversations[0].conversation_id);
-    } else {
-      // Otherwise create a fresh session
-      await createSession();
+    // If no active session was connected, fallback to first available
+    if (!currentSessionId || (!ws && !savedId)) {
+      if (savedId && sessions[savedId]) {
+        connectSession(savedId);
+      } else if (Object.keys(sessions).length > 0) {
+        connectSession(Object.keys(sessions)[0]);
+      } else if (pastConversations.length > 0) {
+        await openPastConversation(pastConversations[0].conversation_id);
+      } else {
+        await createSession();
+      }
     }
   })();
 
   // ── Auto-Reconnect on Tab/Screen Resume ──────────────────────────────────
-  async function checkAndReconnect() {
+  let reconnectTimer = null;
+  function checkAndReconnect() {
     if (!currentSessionId) return;
-    if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
-      console.log('[Auto-Reconnect] Tab visible/focused. Reconnecting WebSocket…');
+    // Only reconnect if truly closed (not CONNECTING or OPEN)
+    if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+
+    // Debounce: wait 500ms before reconnecting to avoid rapid-fire events
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      // Re-check state after debounce
+      if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+      console.log('[Auto-Reconnect] Reconnecting WebSocket…');
       connectSession(currentSessionId);
-    }
+    }, 500);
   }
 
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      checkAndReconnect();
-    }
-  });
+  // Delay registering auto-reconnect listeners to avoid firing during initial page load
+  setTimeout(() => {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkAndReconnect();
+      }
+    });
 
-  window.addEventListener('focus', checkAndReconnect);
-  window.addEventListener('online', checkAndReconnect);
-  window.addEventListener('pageshow', checkAndReconnect);
+    window.addEventListener('focus', checkAndReconnect);
+    window.addEventListener('online', checkAndReconnect);
+    window.addEventListener('pageshow', checkAndReconnect);
+  }, 3000);
 
   // Ping keepalive every 20s
   setInterval(() => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ action: 'ping' }));
-    } else if (ws && ws.readyState === WebSocket.CLOSED && currentSessionId) {
+    } else if (currentSessionId && (!ws || ws.readyState === WebSocket.CLOSED)) {
       checkAndReconnect();
     }
   }, 20000);
 
-  // ── Register PWA Service Worker ──────────────────────────────────────────
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('PWA ServiceWorker registered:', reg.scope))
-        .catch(err => console.warn('PWA ServiceWorker registration failed:', err));
-    });
-  }
 </script>
 </body>
 </html>

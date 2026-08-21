@@ -93,13 +93,13 @@ class AgySession:
     `agy --print --output-format stream-json --continue`.
     """
 
-    def __init__(self, session_id: str, workspace: str = WORKSPACE, model: str = "", conv_id: Optional[str] = None, output_buffer: Optional[list] = None, created_at: Optional[str] = None, name: Optional[str] = None, archived: bool = False, mode: str = "", effort: str = "high"):
+    def __init__(self, session_id: str, workspace: str = WORKSPACE, model: str = "", conv_id: Optional[str] = None, output_buffer: Optional[list] = None, created_at: Optional[str] = None, name: Optional[str] = None, archived: bool = False, mode: str = "", effort: str = ""):
         self.session_id    = session_id
         self.name          = name or f"Session {session_id}"
         self.workspace     = workspace
         self.model         = model
         self.mode          = mode      # "", "plan", "accept-edits"
-        self.effort        = effort    # "low", "medium", "high"
+        self.effort        = effort    # optional effort override
         self.conv_id: Optional[str] = conv_id   # AGY conversation ID
         self.websockets: list[WebSocket] = []
         self.output_buffer: list[dict] = output_buffer if output_buffer is not None else []
@@ -143,7 +143,7 @@ class AgySession:
                 created_at=data.get("created_at"),
                 archived=data.get("archived", False),
                 mode=data.get("mode", ""),
-                effort=data.get("effort", "high")
+                effort=data.get("effort", "")
             )
         except Exception as e:
             print(f"[ERROR] Failed to load session from {filepath}: {e}")
@@ -373,7 +373,7 @@ class AgySession:
             "workspace":   self.workspace,
             "model":       self.model or "(default)",
             "mode":        self.mode or "",
-            "effort":      self.effort or "high",
+            "effort":      self.effort or "",
             "conv_id":     self.conv_id,
             "busy":        self.busy,
             "clients":     len(self.websockets),
@@ -404,7 +404,40 @@ load_all_sessions_from_disk()
 @app.get("/", response_class=HTMLResponse)
 async def root():
     p = Path(__file__).parent / "static" / "index.html"
-    return HTMLResponse(p.read_text() if p.exists() else "<h1>index.html missing</h1>")
+    content = p.read_text() if p.exists() else "<h1>index.html missing</h1>"
+    return HTMLResponse(
+        content=content,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
+
+@app.get("/clear", response_class=HTMLResponse)
+async def clear_cache():
+    return HTMLResponse(
+        content="""<!DOCTYPE html><html><body style="background:#0d1117;color:#c9d1d9;font-family:monospace;padding:40px">
+<h2>Clearing cache...</h2><pre id="log"></pre>
+<script>
+const log = document.getElementById('log');
+function msg(t) { log.textContent += t + '\\n'; }
+(async () => {
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const r of regs) { await r.unregister(); msg('Unregistered SW: ' + r.scope); }
+  }
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    for (const k of keys) { await caches.delete(k); msg('Deleted cache: ' + k); }
+  }
+  msg('\\nDone! Redirecting in 2s...');
+  setTimeout(() => window.location.href = '/', 2000);
+})();
+</script></body></html>""",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
 
 
 @app.get("/api/sessions")
@@ -759,6 +792,7 @@ async def change_effort(session_id: str, effort: str = "high"):
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
+    print(f"[WS] WebSocket connected: session_id={session_id}, client={websocket.client}", flush=True)
 
     if AUTH_TOKEN:
         token = websocket.headers.get("authorization", "").replace("Bearer ", "")
@@ -776,6 +810,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
     # Replay history
     if session.output_buffer:
+        print(f"[WS] Replaying {len(session.output_buffer)} messages to client for session {session_id}", flush=True)
         await websocket.send_json({
             "type": "history",
             "messages": session.output_buffer,
@@ -860,4 +895,11 @@ if __name__ == "__main__":
     import uvicorn
     print(f"[AGY Web Proxy v2] http://{HOST}:{PORT}")
     print(f"[AGY Web Proxy v2] Workspace: {WORKSPACE}  |  AGY: {AGY_BIN}")
-    uvicorn.run(app, host=HOST, port=PORT, log_level="info")
+    uvicorn.run(
+        app,
+        host=HOST,
+        port=PORT,
+        log_level="info",
+        proxy_headers=True,
+        forwarded_allow_ips="*",
+    )
