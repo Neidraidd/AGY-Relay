@@ -1,9 +1,6 @@
-const CACHE_NAME = 'agy-mobile-v1';
+const CACHE_NAME = 'agy-mobile-v3';
 const ASSETS_TO_CACHE = [
-  '/',
   '/manifest.json',
-  '/sw.js',
-  '/static/index.html',
   '/static/icon-192.png',
   '/static/icon-512.png'
 ];
@@ -31,10 +28,27 @@ self.addEventListener('fetch', event => {
   if (event.request.url.includes('/ws/') || event.request.url.includes('/api/')) {
     return;
   }
+
+  // Always fetch HTML pages from network first (never serve stale HTML)
+  if (event.request.mode === 'navigate' || event.request.url.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Static assets: cache-first with background update
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
       if (cachedResponse) {
-        // Fetch background update for cache
         fetch(event.request).then(networkResponse => {
           if (networkResponse && networkResponse.status === 200) {
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResponse));
