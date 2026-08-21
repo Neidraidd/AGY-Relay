@@ -1350,10 +1350,10 @@
       return;
     }
 
-    // Any real content from AGY clears the thinking indicator
-    const isUser = type === 'user';
-    if (!isUser) setThinking(false);
+    // Output responses from AGY clear the thinking indicator
+    if (type === 'output') setThinking(false);
 
+    const isUser = type === 'user';
     const groupClass = isUser ? 'user' : 'agent';
 
     // Collapse consecutive same-side messages into one group
@@ -1922,8 +1922,10 @@
         return;
       }
 
-      // User echo: don't clear thinking (response is still coming)
-      if (msg.type !== 'user') setThinking(false);
+      // Clear thinking on final agent text output
+      if (msg.type === 'output' || msg.type === 'error') {
+        setThinking(false);
+      }
       appendMessage(msg);
     };
 
