@@ -713,6 +713,77 @@
     }
     #interrupt-btn:hover { background: rgba(248,81,73,0.2); border-color: var(--accent-err); }
 
+    /* ── Claude Code Bottom Status Bar (Mode, Effort, Model, Usage) ───── */
+    .prompt-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 6px 0;
+      font-size: 11.5px;
+      color: var(--text-2);
+    }
+    .prompt-toolbar-left, .prompt-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .toolbar-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      padding: 3px 6px;
+      border-radius: 4px;
+      transition: var(--transition);
+      user-select: none;
+      color: var(--text-2);
+      font-weight: 500;
+    }
+    .toolbar-item:hover {
+      background: var(--bg3);
+      color: var(--text-primary);
+    }
+    .toolbar-select-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .toolbar-select-wrapper select {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .usage-ring-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: help;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-3);
+    }
+    .usage-ring {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      display: inline-block;
+      position: relative;
+      box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.4);
+    }
+
+    /* ── Sidebar (workspace info) ────────────────────────────────────── */
+    #workspace-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-3);
+      padding: 0 2px 2px;
+      font-family: var(--font-mono);
+    }
+
     #send-btn {
       display: flex;
       align-items: center;
@@ -1310,7 +1381,7 @@
             <textarea
               id="message-input"
               rows="1"
-              placeholder="Ask AGY anything, type / for commands…"
+              placeholder="Type / for commands"
               autocomplete="off"
               spellcheck="true"
             ></textarea>
@@ -1319,6 +1390,54 @@
               <button id="upload-btn" title="Attach image">🖼</button>
               <button id="interrupt-btn" title="Send Ctrl+C (interrupt)">⏹</button>
               <button id="send-btn">↵</button>
+            </div>
+          </div>
+
+          <!-- Claude Code Bottom Status Bar -->
+          <div class="prompt-toolbar">
+            <div class="prompt-toolbar-left">
+              <!-- Mode selector (Auto / Plan / Accept-Edits) -->
+              <div class="toolbar-item toolbar-select-wrapper" title="Execution Mode">
+                <span id="toolbar-mode-label">Auto</span>
+                <select id="toolbar-mode-select">
+                  <option value="">Auto</option>
+                  <option value="plan">Plan</option>
+                  <option value="accept-edits">Accept-Edits</option>
+                </select>
+              </div>
+
+              <!-- Extra action plus -->
+              <div class="toolbar-item" id="toolbar-new-chat-btn" title="New Session">＋</div>
+
+              <!-- Workspace folder indicator -->
+              <div class="toolbar-item" title="Active Workspace">
+                <span>📁</span> <span id="toolbar-workspace-label" style="font-family:var(--font-mono);font-size:11px">~</span>
+              </div>
+            </div>
+
+            <div class="prompt-toolbar-right">
+              <!-- Model selector -->
+              <div class="toolbar-item toolbar-select-wrapper" title="Active Model">
+                <span id="toolbar-model-label">Auto Model</span>
+                <select id="toolbar-model-select">
+                  <option value="">(default)</option>
+                </select>
+              </div>
+
+              <!-- Thinking Effort selector (Low / Medium / High) -->
+              <div class="toolbar-item toolbar-select-wrapper" title="Reasoning / Thinking Effort">
+                <span id="toolbar-effort-label">High</span>
+                <select id="toolbar-effort-select">
+                  <option value="high" selected>High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+
+              <!-- Usage Wheel / Ring Meter -->
+              <div class="usage-ring-container" id="toolbar-usage-container" title="API / Subscription usage remaining: ~92%">
+                <div class="usage-ring" id="toolbar-usage-ring"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1366,6 +1485,65 @@
   const fileInput          = document.getElementById('file-input');
   const uploadBtn          = document.getElementById('upload-btn');
   const imagePreviews      = document.getElementById('image-previews');
+
+  // ── Prompt Toolbar DOM refs ─────────────────────────────────────────────
+  const toolbarModeSelect      = document.getElementById('toolbar-mode-select');
+  const toolbarModeLabel       = document.getElementById('toolbar-mode-label');
+  const toolbarModelSelect     = document.getElementById('toolbar-model-select');
+  const toolbarModelLabel      = document.getElementById('toolbar-model-label');
+  const toolbarEffortSelect    = document.getElementById('toolbar-effort-select');
+  const toolbarEffortLabel     = document.getElementById('toolbar-effort-label');
+  const toolbarWorkspaceLabel  = document.getElementById('toolbar-workspace-label');
+  const toolbarNewChatBtn      = document.getElementById('toolbar-new-chat-btn');
+  const toolbarUsageRing       = document.getElementById('toolbar-usage-ring');
+  const toolbarUsageContainer  = document.getElementById('toolbar-usage-container');
+
+  // Prompt Toolbar Event Listeners
+  if (toolbarModeSelect) {
+    toolbarModeSelect.addEventListener('change', async () => {
+      const modeVal = toolbarModeSelect.value;
+      toolbarModeLabel.textContent = modeVal ? (modeVal.charAt(0).toUpperCase() + modeVal.slice(1)) : 'Auto';
+      if (currentSessionId) {
+        if (sessions[currentSessionId]) sessions[currentSessionId].mode = modeVal;
+        try {
+          await fetch(`${BASE_URL}/api/sessions/${currentSessionId}/change-mode?mode=${encodeURIComponent(modeVal)}`);
+        } catch(e){}
+      }
+    });
+  }
+
+  if (toolbarModelSelect) {
+    toolbarModelSelect.addEventListener('change', async () => {
+      const modelVal = toolbarModelSelect.value;
+      toolbarModelLabel.textContent = modelVal || 'Auto Model';
+      if (modelSelect) modelSelect.value = modelVal;
+      if (currentSessionId) {
+        if (sessions[currentSessionId]) sessions[currentSessionId].model = modelVal;
+        try {
+          await fetch(`${BASE_URL}/api/sessions/${currentSessionId}/change-model?model=${encodeURIComponent(modelVal)}`);
+        } catch(e){}
+      }
+    });
+  }
+
+  if (toolbarEffortSelect) {
+    toolbarEffortSelect.addEventListener('change', async () => {
+      const effortVal = toolbarEffortSelect.value;
+      toolbarEffortLabel.textContent = effortVal ? (effortVal.charAt(0).toUpperCase() + effortVal.slice(1)) : 'High';
+      if (currentSessionId) {
+        if (sessions[currentSessionId]) sessions[currentSessionId].effort = effortVal;
+        try {
+          await fetch(`${BASE_URL}/api/sessions/${currentSessionId}/change-effort?effort=${encodeURIComponent(effortVal)}`);
+        } catch(e){}
+      }
+    });
+  }
+
+  if (toolbarNewChatBtn) {
+    toolbarNewChatBtn.addEventListener('click', () => {
+      document.getElementById('sidebar-new-btn')?.click();
+    });
+  }
 
   // Sidebar Settings view transitions
   if (sidebarSettingsBtn && sidebarSessionsView && sidebarSettingsView) {
@@ -1622,12 +1800,15 @@
       const r = await fetch(`${BASE_URL}/api/models`);
       const d = await r.json();
       availableModels = d.models || [];
-      modelSelect.innerHTML = '<option value="">(default)</option>';
+      if (modelSelect) modelSelect.innerHTML = '<option value="">(default)</option>';
+      if (toolbarModelSelect) toolbarModelSelect.innerHTML = '<option value="">Auto Model</option>';
+
       availableModels.forEach(m => {
         const opt = document.createElement('option');
         opt.value = m.id;
         opt.textContent = m.label;
-        modelSelect.appendChild(opt);
+        if (modelSelect) modelSelect.appendChild(opt.cloneNode(true));
+        if (toolbarModelSelect) toolbarModelSelect.appendChild(opt);
       });
     } catch (e) {
       console.warn('Could not load models', e);
@@ -2088,12 +2269,33 @@
     workspacePath.textContent = sessions[sessionId]?.workspace || '…';
     sessionIdLabel.textContent = `#${sessionId}`;
 
-    // Sync model selector to this session's model
+    // Sync model selector & toolbar to this session's model
     const sessionModel = sessions[sessionId]?.model;
     if (sessionModel && sessionModel !== '(default)') {
-      modelSelect.value = sessionModel;
+      if (modelSelect) modelSelect.value = sessionModel;
+      if (toolbarModelSelect) toolbarModelSelect.value = sessionModel;
+      if (toolbarModelLabel) toolbarModelLabel.textContent = sessionModel;
     } else {
-      modelSelect.value = '';
+      if (modelSelect) modelSelect.value = '';
+      if (toolbarModelSelect) toolbarModelSelect.value = '';
+      if (toolbarModelLabel) toolbarModelLabel.textContent = 'Auto Model';
+    }
+
+    // Sync mode selector & toolbar
+    const sessionMode = sessions[sessionId]?.mode || '';
+    if (toolbarModeSelect) toolbarModeSelect.value = sessionMode;
+    if (toolbarModeLabel) toolbarModeLabel.textContent = sessionMode ? (sessionMode.charAt(0).toUpperCase() + sessionMode.slice(1)) : 'Auto';
+
+    // Sync effort selector & toolbar
+    const sessionEffort = sessions[sessionId]?.effort || 'high';
+    if (toolbarEffortSelect) toolbarEffortSelect.value = sessionEffort;
+    if (toolbarEffortLabel) toolbarEffortLabel.textContent = sessionEffort.charAt(0).toUpperCase() + sessionEffort.slice(1);
+
+    // Sync workspace indicator in toolbar
+    if (toolbarWorkspaceLabel) {
+      const wsP = sessions[sessionId]?.workspace || '/home/echo';
+      const parts = wsP.split('/');
+      toolbarWorkspaceLabel.textContent = parts[parts.length - 1] || '~';
     }
 
     // Load cached messages from localStorage for 0ms instantaneous display
