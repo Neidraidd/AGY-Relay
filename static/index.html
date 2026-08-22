@@ -488,13 +488,42 @@
     .mockup-iframe-container {
       flex: 1;
       position: relative;
-      background: #000;
+      background: #06080b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
     .mockup-iframe {
       width: 100%;
       height: 100%;
       border: none;
       background: #fff;
+    }
+    .mockup-image-viewer {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      box-sizing: border-box;
+      overflow: auto;
+      background: radial-gradient(circle at center, #141820 0%, #080a0f 100%);
+    }
+    .mockup-image-viewer img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.85);
+      cursor: zoom-in;
+      transition: max-width 0.2s ease, max-height 0.2s ease;
+    }
+    .mockup-image-viewer.zoomed img {
+      max-width: none;
+      max-height: none;
+      cursor: zoom-out;
     }
 
     /* ── Settings Artifact List ───────────────────────────────────────── */
@@ -1823,6 +1852,9 @@
     </div>
     <div class="mockup-iframe-container">
       <iframe id="mockup-modal-iframe" class="mockup-iframe" src="about:blank"></iframe>
+      <div id="mockup-modal-image-wrap" class="mockup-image-viewer" style="display:none;">
+        <img id="mockup-modal-image" src="" alt="Preview">
+      </div>
     </div>
   </div>
 </div>
@@ -2086,11 +2118,13 @@
   });
 
   // ── Mockup Preview Modal & Artifacts Gallery ────────────────────────────
-  const mockupModal       = document.getElementById('mockup-modal');
-  const mockupModalTitle  = document.getElementById('mockup-modal-title');
-  const mockupModalIframe = document.getElementById('mockup-modal-iframe');
-  const mockupModalNewTab = document.getElementById('mockup-modal-newtab');
-  const mockupModalClose  = document.getElementById('mockup-modal-close');
+  const mockupModal          = document.getElementById('mockup-modal');
+  const mockupModalTitle     = document.getElementById('mockup-modal-title');
+  const mockupModalIframe    = document.getElementById('mockup-modal-iframe');
+  const mockupModalImageWrap = document.getElementById('mockup-modal-image-wrap');
+  const mockupModalImage     = document.getElementById('mockup-modal-image');
+  const mockupModalNewTab    = document.getElementById('mockup-modal-newtab');
+  const mockupModalClose     = document.getElementById('mockup-modal-close');
   const artifactsListEl   = document.getElementById('settings-artifacts-list');
   const refreshArtifactsBtn = document.getElementById('refresh-artifacts-btn');
   const mcpBox            = document.getElementById('settings-mcp-box');
@@ -2098,11 +2132,38 @@
   const changelogBox      = document.getElementById('settings-changelog-box');
   const refreshChangelogBtn = document.getElementById('refresh-changelog-btn');
 
+  function isImageUrl(url) {
+    if (!url) return false;
+    const clean = url.toLowerCase().split('?')[0].split('#')[0];
+    return clean.endsWith('.png') || clean.endsWith('.jpg') || clean.endsWith('.jpeg') ||
+           clean.endsWith('.gif') || clean.endsWith('.webp') || clean.endsWith('.svg') ||
+           clean.endsWith('.bmp') || clean.endsWith('.ico') || clean.includes('/uploads/');
+  }
+
   function openMockupModal(url, title = 'Mockup Preview') {
     if (!mockupModal) return;
-    mockupModalTitle.textContent = '🎨 ' + title;
-    mockupModalIframe.src = url;
+    const imgMode = isImageUrl(url);
+    mockupModalTitle.textContent = (imgMode ? '🖼️ ' : '🎨 ') + title;
     mockupModalNewTab.href = url;
+
+    if (imgMode) {
+      mockupModalIframe.style.display = 'none';
+      mockupModalIframe.src = 'about:blank';
+      if (mockupModalImageWrap) {
+        mockupModalImageWrap.classList.remove('zoomed');
+        mockupModalImageWrap.style.display = 'flex';
+      }
+      if (mockupModalImage) mockupModalImage.src = url;
+    } else {
+      if (mockupModalImageWrap) {
+        mockupModalImageWrap.style.display = 'none';
+        mockupModalImageWrap.classList.remove('zoomed');
+      }
+      if (mockupModalImage) mockupModalImage.src = '';
+      mockupModalIframe.style.display = 'block';
+      mockupModalIframe.src = url;
+    }
+
     mockupModal.classList.add('visible');
   }
 
@@ -2110,12 +2171,41 @@
     if (!mockupModal) return;
     mockupModal.classList.remove('visible');
     mockupModalIframe.src = 'about:blank';
+    if (mockupModalImage) mockupModalImage.src = '';
+    if (mockupModalImageWrap) {
+      mockupModalImageWrap.style.display = 'none';
+      mockupModalImageWrap.classList.remove('zoomed');
+    }
+    mockupModalIframe.style.display = 'block';
   }
+
+  if (mockupModalImage) {
+    mockupModalImage.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (mockupModalImageWrap) mockupModalImageWrap.classList.toggle('zoomed');
+    });
+  }
+
+  // Global click delegate for all images in chat & history
+  document.addEventListener('click', (e) => {
+    const img = e.target.closest('.chat-inline-image, .bubble.output img, .img-preview-chip img, .bubble img');
+    if (img && img.src && !img.closest('#mockup-modal')) {
+      e.stopPropagation();
+      openMockupModal(img.src, 'Image Preview');
+    }
+  });
+
+  // ESC key to close modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mockupModal && mockupModal.classList.contains('visible')) {
+      closeMockupModal();
+    }
+  });
 
   if (mockupModalClose) mockupModalClose.addEventListener('click', closeMockupModal);
   if (mockupModal) {
     mockupModal.addEventListener('click', (e) => {
-      if (e.target === mockupModal) closeMockupModal();
+      if (e.target === mockupModal || e.target === mockupModalImageWrap) closeMockupModal();
     });
   }
 
