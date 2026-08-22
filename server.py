@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0008")
+app = FastAPI(title="AGY Relay", version="v202608.0009")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -221,6 +221,10 @@ class AgySession:
                 nonlocal current_text, streamed_any
                 t = current_text.rstrip("\n")
                 if t.strip():
+                    lower_t = t.lower()
+                    if "stream was interrupted" in lower_t or "the stream was interrupted" in lower_t:
+                        current_text = ""
+                        return
                     msg = {"type": "output", "text": t, "timestamp": now_iso()}
                     self.output_buffer.append(msg)
                     await self._broadcast(msg)
