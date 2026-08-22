@@ -1680,7 +1680,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0004</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0005</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -1823,11 +1823,36 @@
   const toolbarAttachBtn       = document.getElementById('toolbar-attach-btn');
   const toolbarNewChatBtn      = document.getElementById('toolbar-new-chat-btn');
 
+  function updateToolbarModelLabel(modelId) {
+    if (!toolbarModelLabel) return;
+    if (!modelId || modelId === '(default)') {
+      toolbarModelLabel.textContent = 'Auto Model';
+      return;
+    }
+    const found = availableModels.find(m => m.id === modelId);
+    if (found) {
+      toolbarModelLabel.textContent = found.label.replace(/\s*\([^)]*\)/, '');
+    } else {
+      toolbarModelLabel.textContent = modelId;
+    }
+  }
+
+  function updateToolbarModeLabel(modeVal) {
+    if (!toolbarModeLabel) return;
+    if (modeVal === 'plan') {
+      toolbarModeLabel.textContent = 'Plan Mode';
+    } else if (modeVal === 'accept-edits') {
+      toolbarModeLabel.textContent = 'Accept Edits';
+    } else {
+      toolbarModeLabel.textContent = 'Auto Mode';
+    }
+  }
+
   // Prompt Toolbar Event Listeners
   if (toolbarModeSelect) {
     toolbarModeSelect.addEventListener('change', async () => {
       const modeVal = toolbarModeSelect.value;
-      toolbarModeLabel.textContent = modeVal ? (modeVal.charAt(0).toUpperCase() + modeVal.slice(1)) : 'Auto';
+      updateToolbarModeLabel(modeVal);
       if (currentSessionId) {
         if (sessions[currentSessionId]) sessions[currentSessionId].mode = modeVal;
         try {
@@ -1840,7 +1865,7 @@
   if (toolbarModelSelect) {
     toolbarModelSelect.addEventListener('change', async () => {
       const modelVal = toolbarModelSelect.value;
-      toolbarModelLabel.textContent = modelVal || 'Auto Model';
+      updateToolbarModelLabel(modelVal);
       if (modelSelect) modelSelect.value = modelVal;
       if (currentSessionId) {
         if (sessions[currentSessionId]) sessions[currentSessionId].model = modelVal;
@@ -2808,17 +2833,17 @@
     if (sessionModel && sessionModel !== '(default)') {
       if (modelSelect) modelSelect.value = sessionModel;
       if (toolbarModelSelect) toolbarModelSelect.value = sessionModel;
-      if (toolbarModelLabel) toolbarModelLabel.textContent = sessionModel;
+      updateToolbarModelLabel(sessionModel);
     } else {
       if (modelSelect) modelSelect.value = '';
       if (toolbarModelSelect) toolbarModelSelect.value = '';
-      if (toolbarModelLabel) toolbarModelLabel.textContent = 'Auto Model';
+      updateToolbarModelLabel('');
     }
 
     // Sync mode selector & toolbar
     const sessionMode = sessions[sessionId]?.mode || '';
     if (toolbarModeSelect) toolbarModeSelect.value = sessionMode;
-    if (toolbarModeLabel) toolbarModeLabel.textContent = sessionMode ? (sessionMode.charAt(0).toUpperCase() + sessionMode.slice(1)) : 'Auto';
+    updateToolbarModeLabel(sessionMode);
 
     // Load cached messages from localStorage for 0ms instantaneous display
     let hadCache = false;
