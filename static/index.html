@@ -742,6 +742,40 @@
       text-align: left;
     }
 
+    /* ── Queued Message Badges ───────────────────────────────────────── */
+    .queued-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 10.5px;
+      font-weight: 600;
+      margin-left: 6px;
+      transition: all 0.2s ease;
+    }
+    .queued-cancel-btn {
+      background: transparent;
+      border: none;
+      color: #fbbf24;
+      cursor: pointer;
+      font-size: 11px;
+      padding: 0 2px;
+      margin-left: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.8;
+      transition: opacity 0.15s ease, color 0.15s ease;
+    }
+    .queued-cancel-btn:hover {
+      opacity: 1;
+      color: #ef4444;
+    }
+
     /* ── Inline Attached Images ─────────────────────────────────────── */
     .chat-inline-images {
       display: flex;
@@ -1949,7 +1983,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0016</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0017</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -2898,12 +2932,30 @@
     // New group with label & timestamp (only created when actual user or AGY message arrives)
     const group = document.createElement('div');
     group.className = `msg-group ${groupClass}`;
+    if (isUser && msg.queue_id) {
+      group.id = `msg-group-queue-${msg.queue_id}`;
+    }
 
     const label = document.createElement('div');
     label.className = 'msg-label';
     label.innerHTML = isUser
       ? `<span>You</span><span>${fmtTime(msg.timestamp)}</span>`
       : `<span>⚡ AGY</span><span>${fmtTime(msg.timestamp)}</span>`;
+
+    if (isUser && msg.queued) {
+      const qBadge = document.createElement('span');
+      qBadge.className = 'queued-badge';
+      qBadge.id = `qb-${msg.queue_id || 'item'}`;
+      qBadge.innerHTML = `<span>⏳ Queued</span><button class="queued-cancel-btn" title="Cancel this queued message">✕</button>`;
+      const cancelBtn = qBadge.querySelector('.queued-cancel-btn');
+      if (cancelBtn && msg.queue_id) {
+        cancelBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          cancelQueuedMessage(msg.queue_id);
+        });
+      }
+      label.appendChild(qBadge);
+    }
     group.appendChild(label);
 
     const bubble = document.createElement('div');
@@ -2916,6 +2968,13 @@
     group.appendChild(bubble);
 
     messagesEl.appendChild(group);
+  }
+
+  function cancelQueuedMessage(queueId) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'cancel_queue_item', queue_id: queueId }));
+      toast('Cancelling queued message…', 'info');
+    }
   }
 
   function fmtTime(iso) {
@@ -3508,6 +3567,26 @@
       if (msg.type === 'thinking_pulse') { setThinking(true); return; }
       if (msg.type === 'done')           { setThinking(false); fetchUsage(false); return; }
       if (msg.type === 'pong')           { return; }
+
+      if (msg.type === 'queue_started') {
+        const badge = document.getElementById(`qb-${msg.id}`);
+        if (badge) badge.remove();
+        setThinking(true);
+        return;
+      }
+
+      if (msg.type === 'queue_cancelled') {
+        const badge = document.getElementById(`qb-${msg.id}`);
+        if (badge) {
+          badge.innerHTML = '<span>❌ Cancelled</span>';
+          badge.style.opacity = '0.6';
+        }
+        return;
+      }
+
+      if (msg.type === 'queue_status') {
+        return;
+      }
 
       // History re-sync from WS: render full history
       if (msg.type === 'history') {

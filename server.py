@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0016")
+app = FastAPI(title="AGY Relay", version="v202608.0017")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -113,6 +113,8 @@ class AgySession:
         self.last_turn_time: float = 0
         self.created_at    = created_at or now_iso()
         self.archived      = archived
+        self.message_queue: list[dict] = []  # FIFO queue of {"id": str, "text": str, "timestamp": str}
+        self.active_proc: Optional[asyncio.subprocess.Process] = None
 
     def save_to_disk(self):
         try:
@@ -166,9 +168,55 @@ class AgySession:
             if ws in self.websockets:
                 self.websockets.remove(ws)
 
+    # ── message queue management ───────────────────────────────────────────
+
+    async def queue_message(self, user_text: str) -> dict:
+        """Enqueue a user message. If session is idle, runs immediately. If busy, adds to FIFO queue."""
+        queue_id = uuid.uuid4().hex[:8]
+        item = {
+            "id": queue_id,
+            "text": user_text,
+            "timestamp": now_iso(),
+        }
+
+        # If idle and no items in queue, execute immediately
+        if not self.busy and len(self.message_queue) == 0:
+            asyncio.create_task(self.run_turn(user_text, queue_id=queue_id))
+            return {"status": "running", "id": queue_id, "position": 0}
+
+        # Otherwise add to FIFO queue and echo to chat with queued badge
+        self.message_queue.append(item)
+        user_msg = {
+            "type": "user",
+            "text": user_text,
+            "queue_id": queue_id,
+            "queued": True,
+            "queue_pos": len(self.message_queue),
+            "timestamp": now_iso()
+        }
+        self.output_buffer.append(user_msg)
+        await self._broadcast(user_msg)
+        await self._broadcast({
+            "type": "queue_status",
+            "queue_length": len(self.message_queue),
+            "queued_messages": self.message_queue,
+            "timestamp": now_iso()
+        })
+        print(f"[QUEUE] Queued message {queue_id} (position #{len(self.message_queue)}) for session {self.session_id}")
+        return {"status": "queued", "id": queue_id, "position": len(self.message_queue)}
+
+    def cancel_queued_message(self, queue_id: str) -> bool:
+        initial_len = len(self.message_queue)
+        self.message_queue = [m for m in self.message_queue if m["id"] != queue_id]
+        for msg in self.output_buffer:
+            if msg.get("queue_id") == queue_id:
+                msg["cancelled"] = True
+                msg["queued"] = False
+        return len(self.message_queue) < initial_len
+
     # ── run one turn ───────────────────────────────────────────────────────
 
-    async def run_turn(self, user_text: str):
+    async def run_turn(self, user_text: str, queue_id: Optional[str] = None):
         """Run one user→agent turn using stream-json output."""
         now = time.time()
         # Reset lock if busy for more than 45s (prevent stale lock)
@@ -177,20 +225,35 @@ class AgySession:
             self.busy = False
 
         if self.busy:
-            await self._broadcast({
-                "type": "error",
-                "text": "AGY is currently processing a request. Please wait.",
-                "timestamp": now_iso(),
-            })
-            return
+            # Route to queue if already busy
+            return await self.queue_message(user_text)
 
         self.busy = True
         self.last_turn_time = now
 
-        # Echo user message immediately
-        user_msg = {"type": "user", "text": user_text, "timestamp": now_iso()}
-        self.output_buffer.append(user_msg)
-        await self._broadcast(user_msg)
+        # If this turn was previously queued in the UI, update its state or broadcast
+        if queue_id:
+            found = False
+            for msg in self.output_buffer:
+                if msg.get("queue_id") == queue_id:
+                    msg["queued"] = False
+                    found = True
+                    break
+            if not found:
+                user_msg = {"type": "user", "text": user_text, "timestamp": now_iso()}
+                self.output_buffer.append(user_msg)
+                await self._broadcast(user_msg)
+            else:
+                await self._broadcast({
+                    "type": "queue_started",
+                    "id": queue_id,
+                    "timestamp": now_iso()
+                })
+        else:
+            user_msg = {"type": "user", "text": user_text, "timestamp": now_iso()}
+            self.output_buffer.append(user_msg)
+            await self._broadcast(user_msg)
+
         await self._broadcast({"type": "thinking_pulse", "timestamp": now_iso()})
 
         cmd = [AGY_BIN, "--output-format", "stream-json",
@@ -213,6 +276,7 @@ class AgySession:
                 stderr=asyncio.subprocess.PIPE,
                 cwd=self.workspace,
             )
+            self.active_proc = proc
 
             current_text = ""
             streamed_any = False
@@ -365,9 +429,22 @@ class AgySession:
             self.output_buffer.append(err)
             await self._broadcast(err)
         finally:
+            self.active_proc = None
             self.busy = False
             self.save_to_disk()
             await self._broadcast({"type": "done", "timestamp": now_iso()})
+
+            # Check if there are queued messages waiting to execute next
+            if self.message_queue:
+                next_item = self.message_queue.pop(0)
+                await self._broadcast({
+                    "type": "queue_status",
+                    "queue_length": len(self.message_queue),
+                    "queued_messages": self.message_queue,
+                    "timestamp": now_iso()
+                })
+                print(f"[QUEUE] Auto-dispatching queued message {next_item['id']} for session {self.session_id}")
+                asyncio.create_task(self.run_turn(next_item["text"], queue_id=next_item["id"]))
 
 
     # ── client management ──────────────────────────────────────────────────
@@ -381,15 +458,17 @@ class AgySession:
 
     def to_dict(self):
         return {
-            "session_id":  self.session_id,
-            "name":        self.name,
-            "workspace":   self.workspace,
-            "model":       self.model or "(default)",
-            "mode":        self.mode or "",
-            "conv_id":     self.conv_id,
-            "busy":        self.busy,
-            "clients":     len(self.websockets),
-            "created_at":  self.created_at,
+            "session_id":    self.session_id,
+            "name":          self.name,
+            "workspace":     self.workspace,
+            "model":         self.model or "(default)",
+            "mode":          self.mode or "",
+            "conv_id":       self.conv_id,
+            "busy":          self.busy,
+            "queue_length":  len(self.message_queue),
+            "queued":        self.message_queue,
+            "clients":       len(self.websockets),
+            "created_at":    self.created_at,
         }
 
 
@@ -841,26 +920,55 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             data = await websocket.receive_json()
             action = data.get("action", "input")
 
-            if action == "input":
+            if action in ("input", "prompt"):
                 text = data.get("text", "").strip()
                 if text:
-                    # Run in background so WS stays alive for streaming
-                    asyncio.create_task(session.run_turn(text))
+                    # Enqueue prompt (runs immediately if idle, queues if busy)
+                    asyncio.create_task(session.queue_message(text))
+
+            elif action == "cancel_queue_item":
+                qid = data.get("queue_id")
+                if qid:
+                    session.cancel_queued_message(qid)
+                    await session._broadcast({
+                        "type": "queue_cancelled",
+                        "id": qid,
+                        "queue_length": len(session.message_queue),
+                        "queued_messages": session.message_queue,
+                        "timestamp": now_iso()
+                    })
+
+            elif action == "clear_queue":
+                session.message_queue.clear()
+                await session._broadcast({
+                    "type": "queue_status",
+                    "queue_length": 0,
+                    "queued_messages": [],
+                    "timestamp": now_iso()
+                })
 
             elif action == "ping":
                 await websocket.send_json({"type": "pong"})
 
             elif action == "clear":
                 session.output_buffer.clear()
+                session.message_queue.clear()
                 session.conv_id = None
                 session.save_to_disk()
 
             elif action == "interrupt":
-                await websocket.send_json({
+                if session.active_proc and session.active_proc.returncode is None:
+                    try:
+                        session.active_proc.terminate()
+                    except Exception:
+                        pass
+                session.busy = False
+                await session._broadcast({
                     "type": "system",
-                    "text": "Interrupt sent (current request will finish — stream-json mode doesn't support mid-stream cancel)",
+                    "text": "Turn stopped by user.",
                     "timestamp": now_iso(),
                 })
+                await session._broadcast({"type": "done", "timestamp": now_iso()})
 
     except WebSocketDisconnect:
         pass
@@ -868,6 +976,51 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         pass
     finally:
         session.remove_client(websocket)
+
+
+@app.get("/api/sessions/{session_id}/queue")
+async def get_session_queue(session_id: str):
+    s = sessions.get(session_id)
+    if not s:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {
+        "ok": True,
+        "busy": s.busy,
+        "queue_length": len(s.message_queue),
+        "queue": s.message_queue,
+    }
+
+
+@app.delete("/api/sessions/{session_id}/queue/{queue_id}")
+async def cancel_session_queue_item(session_id: str, queue_id: str):
+    s = sessions.get(session_id)
+    if not s:
+        raise HTTPException(status_code=404, detail="Session not found")
+    cancelled = s.cancel_queued_message(queue_id)
+    if cancelled:
+        await s._broadcast({
+            "type": "queue_cancelled",
+            "id": queue_id,
+            "queue_length": len(s.message_queue),
+            "queued_messages": s.message_queue,
+            "timestamp": now_iso()
+        })
+    return {"ok": True, "cancelled": cancelled, "queue_length": len(s.message_queue)}
+
+
+@app.delete("/api/sessions/{session_id}/queue")
+async def clear_session_queue(session_id: str):
+    s = sessions.get(session_id)
+    if not s:
+        raise HTTPException(status_code=404, detail="Session not found")
+    s.message_queue.clear()
+    await s._broadcast({
+        "type": "queue_status",
+        "queue_length": 0,
+        "queued_messages": [],
+        "timestamp": now_iso()
+    })
+    return {"ok": True, "cleared": True}
 
 
 @app.get("/api/health")
