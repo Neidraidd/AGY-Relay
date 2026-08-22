@@ -705,6 +705,43 @@
       text-align: left;
     }
 
+    /* ── Inline Attached Images ─────────────────────────────────────── */
+    .chat-inline-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .chat-inline-image {
+      max-width: 100%;
+      max-height: 240px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.15);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      background: #000;
+      display: block;
+    }
+    .chat-inline-image:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .user-bubble-text {
+      line-height: 1.5;
+      word-break: normal;
+      overflow-wrap: break-word;
+    }
+    .bubble.output img {
+      max-width: 100%;
+      max-height: 320px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      margin: 8px 0;
+      display: block;
+    }
+
     .bubble.output, .bubble.agent {
       background: transparent;
       border: none;
@@ -1692,7 +1729,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0009</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0010</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -2211,18 +2248,87 @@
     }
   }
 
+  // ── Helper to convert local image paths to web URLs ──────────────────────
+  function resolveImageWebUrl(rawPath) {
+    if (!rawPath) return '';
+    if (rawPath.includes('/uploads/')) {
+      const fn = rawPath.split('/uploads/').pop();
+      return `${BASE_URL}/uploads/${encodeURIComponent(fn)}`;
+    }
+    if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+      return rawPath;
+    }
+    if (rawPath.startsWith('/')) {
+      return `${BASE_URL}${rawPath}`;
+    }
+    return rawPath;
+  }
+
   // ── Markdown rendering helper ───────────────────────────────────────────
   function renderMarkdown(text) {
     if (!text) return '';
+    // Preprocess [Image: /path/to/image.png] to Markdown images
+    const processedText = text.replace(/\[Image:\s*([^\]]+)\]/g, (match, p1) => {
+      const webUrl = resolveImageWebUrl(p1.trim());
+      return `\n\n![Attached image](${webUrl})\n\n`;
+    });
+
     if (typeof marked !== 'undefined' && (marked.parse || typeof marked === 'function')) {
       try {
         const fn = marked.parse || marked;
-        return fn(text, { breaks: true, gfm: true });
+        return fn(processedText, { breaks: true, gfm: true });
       } catch(e) {
         console.warn('Markdown parse error:', e);
       }
     }
-    return escapeHtml(text);
+    return escapeHtml(processedText);
+  }
+
+  function renderUserBubbleContent(bubble, rawText) {
+    if (!rawText) {
+      bubble.textContent = '';
+      return;
+    }
+
+    const imgRegex = /\[Image:\s*([^\]]+)\]/g;
+    let match;
+    const images = [];
+    let cleanedText = rawText;
+
+    while ((match = imgRegex.exec(rawText)) !== null) {
+      const fullMatch = match[0];
+      const rawPath = match[1].trim();
+      const webUrl = resolveImageWebUrl(rawPath);
+      images.push({ rawPath, webUrl });
+      cleanedText = cleanedText.replace(fullMatch, '');
+    }
+
+    cleanedText = cleanedText.trim();
+
+    if (images.length > 0) {
+      const imgContainer = document.createElement('div');
+      imgContainer.className = 'chat-inline-images';
+      images.forEach(imgData => {
+        const img = document.createElement('img');
+        img.src = imgData.webUrl;
+        img.alt = 'Attached image';
+        img.className = 'chat-inline-image';
+        img.loading = 'lazy';
+        img.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openMockupModal(imgData.webUrl, 'Image Preview');
+        });
+        imgContainer.appendChild(img);
+      });
+      bubble.appendChild(imgContainer);
+    }
+
+    if (cleanedText) {
+      const textEl = document.createElement('div');
+      textEl.className = 'user-bubble-text';
+      textEl.textContent = cleanedText;
+      bubble.appendChild(textEl);
+    }
   }
 
   // ── Message rendering ──────────────────────────────────────────────────
@@ -2321,7 +2427,7 @@
     const bubble = document.createElement('div');
     bubble.className = `bubble ${type}`;
     if (isUser) {
-      bubble.textContent = msg.text;
+      renderUserBubbleContent(bubble, msg.text);
     } else {
       bubble.innerHTML = renderMarkdown(msg.text);
     }
@@ -3003,11 +3109,6 @@
       }
       const imageRefs = uploadedPaths.map(p => `[Image: ${p}]`).join(' ');
       fullText = imageRefs + (text ? '\n' + text : '');
-
-      // Show image bubbles in chat
-      pendingImages.filter(p => p.serverUrl).forEach(p => {
-        appendImageBubble(p.localUrl, p.serverUrl);
-      });
     }
 
     ws.send(JSON.stringify({ action: 'input', text: fullText }));
