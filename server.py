@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0005")
+app = FastAPI(title="AGY Relay", version="v202608.0006")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -100,13 +100,12 @@ class AgySession:
     `agy --print --output-format stream-json --continue`.
     """
 
-    def __init__(self, session_id: str, workspace: str = WORKSPACE, model: str = "", conv_id: Optional[str] = None, output_buffer: Optional[list] = None, created_at: Optional[str] = None, name: Optional[str] = None, archived: bool = False, mode: str = "", effort: str = ""):
+    def __init__(self, session_id: str, workspace: str = WORKSPACE, model: str = "", conv_id: Optional[str] = None, output_buffer: Optional[list] = None, created_at: Optional[str] = None, name: Optional[str] = None, archived: bool = False, mode: str = ""):
         self.session_id    = session_id
         self.name          = name or f"Session {session_id}"
         self.workspace     = workspace
         self.model         = model
         self.mode          = mode      # "", "plan", "accept-edits"
-        self.effort        = effort    # optional effort override
         self.conv_id: Optional[str] = conv_id   # AGY conversation ID
         self.websockets: list[WebSocket] = []
         self.output_buffer: list[dict] = output_buffer if output_buffer is not None else []
@@ -124,7 +123,6 @@ class AgySession:
                 "workspace": self.workspace,
                 "model": self.model,
                 "mode": self.mode,
-                "effort": self.effort,
                 "conv_id": self.conv_id,
                 "created_at": self.created_at,
                 "archived": self.archived,
@@ -149,8 +147,7 @@ class AgySession:
                 output_buffer=data.get("output_buffer", []),
                 created_at=data.get("created_at"),
                 archived=data.get("archived", False),
-                mode=data.get("mode", ""),
-                effort=data.get("effort", "")
+                mode=data.get("mode", "")
             )
         except Exception as e:
             print(f"[ERROR] Failed to load session from {filepath}: {e}")
@@ -202,8 +199,6 @@ class AgySession:
             cmd += ["--model", self.model]
         if self.mode:
             cmd += ["--mode", self.mode]
-        if self.effort:
-            cmd += ["--effort", self.effort]
         if self.conv_id:
             cmd += ["--conversation", self.conv_id]
         else:
@@ -380,7 +375,6 @@ class AgySession:
             "workspace":   self.workspace,
             "model":       self.model or "(default)",
             "mode":        self.mode or "",
-            "effort":      self.effort or "",
             "conv_id":     self.conv_id,
             "busy":        self.busy,
             "clients":     len(self.websockets),
@@ -787,13 +781,8 @@ async def change_mode(session_id: str, mode: str = ""):
 
 
 @app.get("/api/sessions/{session_id}/change-effort")
-async def change_effort(session_id: str, effort: str = "high"):
-    if session_id not in sessions:
-        return {"error": "not found"}
-    session = sessions[session_id]
-    session.effort = effort
-    session.save_to_disk()
-    return {"ok": True, "effort": effort}
+async def change_effort(session_id: str, effort: str = ""):
+    return {"ok": True, "deprecated": True}
 
 
 @app.websocket("/ws/{session_id}")
