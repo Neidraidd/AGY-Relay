@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0010")
+app = FastAPI(title="AGY Relay", version="v202608.0011")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -753,22 +753,34 @@ async def list_models():
         return {"models": [], "error": str(e)}
 
 
+@app.post("/api/upload")
 @app.post("/api/sessions/{session_id}/upload")
-async def upload_image(session_id: str, file: UploadFile = File(...)):
-    if session_id not in sessions:
-        return JSONResponse({"error": "session not found"}, status_code=404)
-    allowed = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"}
-    ct = (file.content_type or "").lower()
-    if ct not in allowed:
-        return JSONResponse({"error": f"Unsupported: {ct}"}, status_code=400)
-    ext   = Path(file.filename or "upload").suffix or ".jpg"
-    fname = f"{session_id}_{uuid.uuid4().hex[:8]}{ext}"
+async def upload_image(session_id: str = "default", file: UploadFile = File(...)):
+    # Auto-initialize session if not in memory
+    if session_id and session_id not in sessions:
+        sess_file = SESSIONS_DIR / f"{session_id}.json"
+        if sess_file.exists():
+            sess = AgySession.load_from_disk(sess_file)
+            if sess:
+                sessions[session_id] = sess
+        if session_id not in sessions:
+            sessions[session_id] = AgySession(session_id, WORKSPACE)
+            sessions[session_id].save_to_disk()
+
+    ext = Path(file.filename or "upload.png").suffix or ".png"
+    prefix = session_id if session_id else "upload"
+    fname = f"{prefix}_{uuid.uuid4().hex[:8]}{ext}"
     dest  = UPLOAD_DIR / fname
     async with aiofiles.open(dest, "wb") as f:
         content = await file.read()
         await f.write(content)
-    return {"ok": True, "filename": file.filename, "path": str(dest),
-            "url": f"/uploads/{fname}", "size": len(content)}
+    return {
+        "ok": True,
+        "filename": file.filename,
+        "path": str(dest),
+        "url": f"/uploads/{fname}",
+        "size": len(content)
+    }
 
 
 @app.get("/api/sessions/{session_id}/change-model")

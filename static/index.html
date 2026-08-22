@@ -1758,7 +1758,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0010</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0011</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -2631,12 +2631,14 @@
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const r = await fetch(`${BASE_URL}/api/sessions/${currentSessionId}/upload`, { method: 'POST', body: fd });
+      const endpoint = currentSessionId ? `${BASE_URL}/api/sessions/${currentSessionId}/upload` : `${BASE_URL}/api/upload`;
+      const r = await fetch(endpoint, { method: 'POST', body: fd });
       const d = await r.json();
       if (d.ok) {
         entry.serverPath = d.path;
         entry.serverUrl  = d.url;
-        toast(`Image ready: ${d.filename}`, 'success');
+        renderImagePreviews();
+        toast(`Image ready: ${d.filename || file.name}`, 'success');
       } else {
         toast('Upload failed: ' + (d.error || '?'), 'error');
         pendingImages = pendingImages.filter(p => p.id !== entry.id);
@@ -2657,12 +2659,19 @@
 
       const img = document.createElement('img');
       img.src = entry.localUrl;
+      img.alt = 'Preview';
+      img.title = 'Click to enlarge preview';
+      img.addEventListener('click', () => {
+        openMockupModal(entry.localUrl || entry.serverUrl, 'Image Preview');
+      });
       chip.appendChild(img);
 
       const rm = document.createElement('span');
       rm.className = 'remove-img';
       rm.textContent = '×';
-      rm.addEventListener('click', () => {
+      rm.title = 'Remove image';
+      rm.addEventListener('click', (e) => {
+        e.stopPropagation();
         pendingImages = pendingImages.filter(p => p.id !== entry.id);
         renderImagePreviews();
       });
