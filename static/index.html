@@ -1183,6 +1183,187 @@
       cursor: pointer;
     }
 
+    /* ── Quota Ring Meter & Usage Modal ───────────────────────────────── */
+    .quota-ring-svg {
+      transform: rotate(-90deg);
+      flex-shrink: 0;
+      display: block;
+    }
+    .quota-ring-bg {
+      stroke: rgba(255, 255, 255, 0.12);
+    }
+    .quota-ring-fill {
+      transition: stroke-dasharray 0.5s ease, stroke 0.3s ease;
+    }
+    #toolbar-usage-btn {
+      padding: 2px 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 4px;
+    }
+    #toolbar-usage-btn:hover {
+      background: var(--bg3);
+      border-color: var(--border);
+    }
+
+    .usage-modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      width: 92%;
+      max-width: 480px;
+      padding: 0;
+      overflow: hidden;
+      animation: modalFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    .usage-modal-header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .usage-modal-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .usage-title-icon {
+      font-size: 20px;
+    }
+    .usage-modal-title h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .usage-modal-title p {
+      font-size: 11px;
+      color: var(--text-3);
+      margin: 2px 0 0;
+    }
+    .usage-modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .usage-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .usage-btn:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+    .usage-btn-close {
+      padding: 4px 8px;
+      font-size: 13px;
+    }
+    .usage-modal-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .usage-group-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .usage-group-card.active-group {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .usage-group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .usage-group-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .usage-active-badge {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: rgba(249, 115, 22, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+    .usage-group-models {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+    .usage-bucket-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-top: 4px;
+    }
+    .usage-bucket-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+    }
+    .usage-bucket-name {
+      color: var(--text-2);
+      font-weight: 500;
+    }
+    .usage-bucket-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+    .usage-bar-track {
+      width: 100%;
+      height: 7px;
+      background: var(--bg3);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .usage-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.4s ease, background 0.3s ease;
+    }
+    .usage-bucket-desc {
+      font-size: 10.5px;
+      color: var(--text-3);
+      line-height: 1.4;
+    }
+    .usage-modal-footer {
+      padding: 10px 16px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      font-size: 10.5px;
+      color: var(--text-3);
+    }
+
     /* ── Sidebar (workspace info) ────────────────────────────────────── */
     #workspace-label {
       font-size: 10px;
@@ -1758,7 +1939,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0011</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0012</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -1809,6 +1990,15 @@
           <!-- Claude Code Bottom Status Bar -->
           <div class="prompt-toolbar">
             <div class="prompt-toolbar-left">
+              <!-- Quota / Usage Ring Button (to the left of Auto) -->
+              <div class="toolbar-item" id="toolbar-usage-btn" title="Model Quota & Usage (click for breakdown)">
+                <svg class="quota-ring-svg" width="14" height="14" viewBox="0 0 36 36">
+                  <path class="quota-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4.5" />
+                  <path id="quota-ring-fill" class="quota-ring-fill" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--accent)" stroke-width="4.5" stroke-linecap="round" />
+                </svg>
+                <span id="toolbar-usage-label" style="font-family:var(--font-mono);font-size:11px;font-weight:600">--%</span>
+              </div>
+
               <!-- Mode selector (Auto / Plan / Accept-Edits) -->
               <div class="toolbar-item toolbar-select-wrapper" title="Execution Mode">
                 <span id="toolbar-mode-label">Auto</span>
@@ -1840,6 +2030,30 @@
     </div> <!-- /chat-container -->
   </div> <!-- /main-layout -->
 </div> <!-- /app -->
+
+<div id="usage-modal" class="modal-overlay">
+  <div class="usage-modal-card">
+    <div class="usage-modal-header">
+      <div class="usage-modal-title">
+        <span class="usage-title-icon">⚡</span>
+        <div>
+          <h3>Model Quota & Usage</h3>
+          <p id="usage-updated-time">Checking AGY quota limits…</p>
+        </div>
+      </div>
+      <div class="usage-modal-actions">
+        <button id="usage-refresh-btn" class="usage-btn" title="Refresh Quota">↻ Refresh</button>
+        <button id="usage-close-btn" class="usage-btn usage-btn-close" title="Close">✕</button>
+      </div>
+    </div>
+    <div id="usage-modal-body" class="usage-modal-body">
+      <div style="font-size:12px;color:var(--text-3);text-align:center;padding:16px 0">Fetching usage data…</div>
+    </div>
+    <div class="usage-modal-footer">
+      <span>Within each group, models share a weekly and 5-hour limit. Limits reset dynamically.</span>
+    </div>
+  </div>
+</div>
 
 <div id="mockup-modal">
   <div class="mockup-modal-content">
@@ -1897,6 +2111,9 @@
   const imagePreviews      = document.getElementById('image-previews');
 
   // ── Prompt Toolbar DOM refs ─────────────────────────────────────────────
+  const toolbarUsageBtn        = document.getElementById('toolbar-usage-btn');
+  const toolbarUsageLabel      = document.getElementById('toolbar-usage-label');
+  const quotaRingFill          = document.getElementById('quota-ring-fill');
   const toolbarModeSelect      = document.getElementById('toolbar-mode-select');
   const toolbarModeLabel       = document.getElementById('toolbar-mode-label');
   const toolbarModelSelect     = document.getElementById('toolbar-model-select');
@@ -1904,18 +2121,27 @@
   const toolbarAttachBtn       = document.getElementById('toolbar-attach-btn');
   const toolbarNewChatBtn      = document.getElementById('toolbar-new-chat-btn');
 
+  // Usage Modal DOM refs
+  const usageModal             = document.getElementById('usage-modal');
+  const usageModalBody         = document.getElementById('usage-modal-body');
+  const usageRefreshBtn        = document.getElementById('usage-refresh-btn');
+  const usageCloseBtn          = document.getElementById('usage-close-btn');
+  const usageUpdatedTime       = document.getElementById('usage-updated-time');
+  let currentUsageData         = null;
+
   function updateToolbarModelLabel(modelId) {
     if (!toolbarModelLabel) return;
     if (!modelId || modelId === '(default)') {
       toolbarModelLabel.textContent = 'Auto Model';
-      return;
-    }
-    const found = availableModels.find(m => m.id === modelId);
-    if (found) {
-      toolbarModelLabel.textContent = found.label.replace(/\s*\([^)]*\)/, '');
     } else {
-      toolbarModelLabel.textContent = modelId;
+      const found = availableModels.find(m => m.id === modelId);
+      if (found) {
+        toolbarModelLabel.textContent = found.label.replace(/\s*\([^)]*\)/, '');
+      } else {
+        toolbarModelLabel.textContent = modelId;
+      }
     }
+    if (currentUsageData) updateQuotaMeter(currentUsageData);
   }
 
   function updateToolbarModeLabel(modeVal) {
@@ -1927,6 +2153,162 @@
     } else {
       toolbarModeLabel.textContent = 'Auto Mode';
     }
+  }
+
+  function updateQuotaMeter(usageData) {
+    if (!usageData || !usageData.groups || !quotaRingFill || !toolbarUsageLabel) return;
+    
+    // Find active model group based on session model
+    const sessionModel = (currentSessionId && sessions[currentSessionId]?.model) ? sessions[currentSessionId].model.toLowerCase() : '';
+    const is3p = sessionModel.startsWith('claude') || sessionModel.startsWith('gpt');
+    
+    let targetBucket = null;
+    if (is3p) {
+      const g = usageData.groups.find(x => x.name.toLowerCase().includes('claude') || x.name.toLowerCase().includes('gpt'));
+      if (g && g.buckets) {
+        targetBucket = g.buckets.find(b => b.window === 'weekly') || g.buckets[0];
+      }
+    } else {
+      const g = usageData.groups.find(x => x.name.toLowerCase().includes('gemini'));
+      if (g && g.buckets) {
+        targetBucket = g.buckets.find(b => b.window === '5h') || g.buckets[0];
+      }
+    }
+    
+    if (!targetBucket) {
+      const firstGroup = usageData.groups[0];
+      if (firstGroup && firstGroup.buckets) targetBucket = firstGroup.buckets[0];
+    }
+    
+    if (targetBucket) {
+      const fraction = (targetBucket.disabled || targetBucket.remaining_fraction === undefined) ? (targetBucket.remaining_fraction || 0) : targetBucket.remaining_fraction;
+      const pct = Math.max(0, Math.min(100, Math.round(fraction * 100)));
+      
+      let color = '#22c55e'; // Green
+      if (pct < 20) color = '#ef4444'; // Red
+      else if (pct < 50) color = '#f59e0b'; // Amber
+      
+      quotaRingFill.setAttribute('stroke-dasharray', `${pct}, 100`);
+      quotaRingFill.setAttribute('stroke', color);
+      toolbarUsageLabel.textContent = `${pct}%`;
+      toolbarUsageLabel.style.color = color;
+      
+      if (toolbarUsageBtn) {
+        toolbarUsageBtn.title = `${targetBucket.name}: ${pct}% remaining (Click for full breakdown)`;
+      }
+    }
+  }
+
+  function renderUsageModal(usageData) {
+    if (!usageModalBody) return;
+    if (!usageData || !usageData.groups || usageData.groups.length === 0) {
+      usageModalBody.innerHTML = '<div style="font-size:12px;color:var(--text-3);text-align:center;padding:16px 0">No quota data available.</div>';
+      return;
+    }
+
+    const sessionModel = (currentSessionId && sessions[currentSessionId]?.model) ? sessions[currentSessionId].model.toLowerCase() : '';
+    const is3p = sessionModel.startsWith('claude') || sessionModel.startsWith('gpt');
+
+    usageModalBody.innerHTML = '';
+    usageData.groups.forEach(grp => {
+      const isGroupActive = is3p
+        ? (grp.name.toLowerCase().includes('claude') || grp.name.toLowerCase().includes('gpt'))
+        : grp.name.toLowerCase().includes('gemini');
+
+      const card = document.createElement('div');
+      card.className = 'usage-group-card' + (isGroupActive ? ' active-group' : '');
+
+      const header = document.createElement('div');
+      header.className = 'usage-group-header';
+      header.innerHTML = `
+        <div class="usage-group-name">
+          <span>${escapeHtml(grp.name)}</span>
+          ${isGroupActive ? '<span class="usage-active-badge">Active</span>' : ''}
+        </div>
+      `;
+      card.appendChild(header);
+
+      if (grp.description) {
+        const desc = document.createElement('div');
+        desc.className = 'usage-group-models';
+        desc.textContent = grp.description;
+        card.appendChild(desc);
+      }
+
+      (grp.buckets || []).forEach(b => {
+        const item = document.createElement('div');
+        item.className = 'usage-bucket-item';
+
+        const fraction = b.remaining_fraction !== undefined ? b.remaining_fraction : 0;
+        const pct = Math.max(0, Math.min(100, Math.round(fraction * 100)));
+        let color = '#22c55e';
+        if (pct < 20) color = '#ef4444';
+        else if (pct < 50) color = '#f59e0b';
+
+        const valText = b.disabled ? 'Disabled' : `${pct}%`;
+        const valColor = b.disabled ? 'var(--text-3)' : color;
+
+        item.innerHTML = `
+          <div class="usage-bucket-info">
+            <span class="usage-bucket-name">${escapeHtml(b.name || 'Limit')}</span>
+            <span class="usage-bucket-val" style="color:${valColor}">${valText}</span>
+          </div>
+          <div class="usage-bar-track">
+            <div class="usage-bar-fill" style="width:${b.disabled ? '0%' : pct + '%'};background:${color}"></div>
+          </div>
+          ${b.description ? `<div class="usage-bucket-desc">${escapeHtml(b.description)}</div>` : ''}
+        `;
+        card.appendChild(item);
+      });
+
+      usageModalBody.appendChild(card);
+    });
+
+    if (usageUpdatedTime) {
+      usageUpdatedTime.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+  }
+
+  async function fetchUsage(force = false) {
+    if (usageRefreshBtn) usageRefreshBtn.textContent = '↻ Checking…';
+    try {
+      const url = `${BASE_URL}/api/usage` + (force ? '?force=true' : '');
+      const r = await fetch(url);
+      const data = await r.json();
+      if (data.ok && data.usage) {
+        currentUsageData = data.usage;
+        updateQuotaMeter(currentUsageData);
+        renderUsageModal(currentUsageData);
+      }
+    } catch(e) {
+      console.warn('Failed to fetch usage:', e);
+    } finally {
+      if (usageRefreshBtn) usageRefreshBtn.textContent = '↻ Refresh';
+    }
+  }
+
+  function openUsageModal() {
+    if (!usageModal) return;
+    usageModal.style.display = 'flex';
+    if (!currentUsageData) {
+      fetchUsage(false);
+    } else {
+      renderUsageModal(currentUsageData);
+    }
+  }
+
+  function closeUsageModal() {
+    if (!usageModal) return;
+    usageModal.style.display = 'none';
+  }
+
+  if (toolbarUsageBtn) toolbarUsageBtn.addEventListener('click', openUsageModal);
+  if (usageCloseBtn) usageCloseBtn.addEventListener('click', closeUsageModal);
+  if (usageRefreshBtn) usageRefreshBtn.addEventListener('click', () => fetchUsage(true));
+  if (usageModal) {
+    usageModal.addEventListener('click', (e) => {
+      if (e.target === usageModal) closeUsageModal();
+    });
   }
 
   // Prompt Toolbar Event Listeners
@@ -3114,7 +3496,7 @@
       try { msg = JSON.parse(evt.data); } catch { return; }
 
       if (msg.type === 'thinking_pulse') { setThinking(true); return; }
-      if (msg.type === 'done')           { setThinking(false); return; }
+      if (msg.type === 'done')           { setThinking(false); fetchUsage(false); return; }
       if (msg.type === 'pong')           { return; }
 
       // History re-sync from WS: render full history
@@ -3426,9 +3808,9 @@
       connectSession(savedId);
     }
 
-    // Fetch models, sessions, and past conversations in background
+    // Fetch models, sessions, past conversations, and usage quota in background
     try {
-      await Promise.allSettled([loadModels(), fetchSessions(), fetchConversations()]);
+      await Promise.allSettled([loadModels(), fetchSessions(), fetchConversations(), fetchUsage(false)]);
     } catch(e) {
       console.warn('Metadata fetch warning:', e);
     }

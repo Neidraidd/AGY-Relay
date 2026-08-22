@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0011")
+app = FastAPI(title="AGY Relay", version="v202608.0012")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -1022,13 +1022,47 @@ async def list_mcp():
         return {"ok": False, "error": str(e)}
 
 
-@app.get("/api/changelog")
-async def get_changelog():
-    """Get latest AGY release notes and changelog"""
+_usage_cache = {"timestamp": 0, "data": None}
+
+@app.get("/api/usage")
+async def get_usage(force: bool = False):
+    """Query current AGY quota, smoothing, and usage breakdown"""
+    global _usage_cache
+    now = time.time()
+    if not force and _usage_cache["data"] and (now - _usage_cache["timestamp"] < 45):
+        return _usage_cache["data"]
+
     try:
-        r = subprocess.run([AGY_BIN, "changelog"], capture_output=True, text=True, timeout=10)
-        output = (r.stdout or "").strip() or "No changelog available."
-        return {"ok": True, "changelog": output}
+        proc = await asyncio.create_subprocess_exec(
+            AGY_BIN, "--output-format", "stream-json", "--dangerously-skip-permissions", "--prompt", "/usage",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=WORKSPACE
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=12)
+        
+        usage_data = None
+        for line in stdout.decode("utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+                if ev.get("event") == "command_result" and ev.get("command", {}).get("name") == "usage":
+                    usage_data = ev.get("command", {}).get("data")
+                    break
+                elif ev.get("event") == "result" and "command" in ev.get("result", {}):
+                    usage_data = ev.get("result", {}).get("command", {}).get("data")
+                    break
+            except Exception:
+                continue
+
+        if usage_data:
+            result = {"ok": True, "usage": usage_data, "updated_at": now_iso()}
+            _usage_cache = {"timestamp": now, "data": result}
+            return result
+        else:
+            return {"ok": False, "error": "No usage data found in output", "raw": stdout.decode("utf-8", errors="replace")[:300]}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
