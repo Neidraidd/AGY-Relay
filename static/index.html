@@ -669,11 +669,19 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE / Edge */
     }
 
-    #messages::-webkit-scrollbar { width: 4px; }
-    #messages::-webkit-scrollbar-track { background: transparent; }
-    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    #messages::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      background: transparent !important;
+    }
+    #messages::-webkit-scrollbar-thumb {
+      display: none !important;
+    }
 
     /* ── Message bubbles ─────────────────────────────────────────────── */
     /* ── Message bubbles (Claude Code aesthetic) ────────────────────── */
@@ -846,10 +854,12 @@
       border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
 
-    .bubble.output hr {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 14px 0;
+    .bubble.output hr, hr {
+      display: none !important;
+      height: 0 !important;
+      border: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
 
     .bubble.output table {
@@ -1939,7 +1949,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0013</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0014</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
