@@ -1492,8 +1492,8 @@
       }
     }
 
-    /* ── Responsive Mobile First Adjustments ────────────────────────────────── */
-    @media (max-width: 600px) {
+    /* ── Responsive Mobile & Tablet Adjustments ────────────────────────────── */
+    @media (max-width: 1024px) {
       header {
         padding: 6px 12px;
         gap: 6px;
@@ -1510,15 +1510,16 @@
         display: none;
       }
       #messages {
-        padding: 8px 6px;
+        padding: 10px 12px;
         gap: 6px;
-        max-width: 100%;
+        max-width: 100% !important;
+        overflow-x: hidden;
       }
       .input-inner {
-        max-width: 100%;
+        max-width: 100% !important;
       }
       #thinking-indicator {
-        max-width: 100%;
+        max-width: 100% !important;
         border-radius: 0;
       }
       #input-area {
@@ -1949,7 +1950,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0014</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0015</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -3762,6 +3763,41 @@
     scrollToBottom(true);
   });
 
+  // Forward touch & wheel scrolling from black side borders (.messages-area) to #messages
+  const messagesAreaEl = document.querySelector('.messages-area');
+  if (messagesAreaEl && messagesEl) {
+    let touchStartY = 0;
+    let touchStartX = 0;
+
+    messagesAreaEl.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length > 0) {
+        touchStartY = e.touches[0].clientY;
+        touchStartX = e.touches[0].clientX;
+      }
+    }, { passive: true });
+
+    messagesAreaEl.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches.length > 0) {
+        const currentY = e.touches[0].clientY;
+        const currentX = e.touches[0].clientX;
+        const deltaY = touchStartY - currentY;
+        touchStartY = currentY;
+        touchStartX = currentX;
+
+        // If touching on black side borders (outside of messagesEl content), scroll messagesEl
+        if (e.target === messagesAreaEl || !messagesEl.contains(e.target)) {
+          messagesEl.scrollTop += deltaY;
+        }
+      }
+    }, { passive: true });
+
+    messagesAreaEl.addEventListener('wheel', (e) => {
+      if (e.target === messagesAreaEl || !messagesEl.contains(e.target)) {
+        messagesEl.scrollTop += e.deltaY;
+      }
+    }, { passive: true });
+  }
+
   // ── Mobile height fix (handle mobile virtual viewport height) ───────────
   function setAppHeight() {
     const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -3777,9 +3813,9 @@
   window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 200));
   setAppHeight();
 
-  // Prevent dragging document into empty black void when touching outside scrollable areas
+  // Prevent dragging document while allowing messages, side borders, and sidebar to scroll
   document.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('#messages, #sidebar-sessions-view, #sidebar-settings-view, textarea, input, select')) {
+    if (!e.target.closest('#messages, .messages-area, #chat-container, #sidebar-sessions-view, #sidebar-settings-view, #usage-modal, #mockup-modal, textarea, input, select')) {
       e.preventDefault();
     }
   }, { passive: false });
