@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0007")
+app = FastAPI(title="AGY Relay", version="v202608.0008")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -195,8 +195,9 @@ class AgySession:
 
         cmd = [AGY_BIN, "--output-format", "stream-json",
                "--dangerously-skip-permissions"]
-        if self.model:
-            cmd += ["--model", self.model]
+        active_model = self.model if (self.model and self.model != "(default)") else os.environ.get("AGY_DEFAULT_MODEL", "gemini-3.7-flash-high")
+        if active_model:
+            cmd += ["--model", active_model]
         if self.mode:
             cmd += ["--mode", self.mode]
         if self.conv_id:
@@ -313,21 +314,25 @@ class AgySession:
                         status = res.get("status", "")
                         err_detail = res.get("error", "")
                         if status not in ("SUCCESS", ""):
-                            # Filter out non-fatal subscription/quota notices, internal cortex tool errors, grep timeouts, and stream interruption notices
                             err_str = str(err_detail or "").lower()
-                            is_noise = any(k in err_str for k in (
-                                "quota reached", "subscription", "declaring permissions",
-                                "cortex tool", "invalid tool call error", "convert tool call",
-                                "grep command timed out", "context deadline exceeded",
-                                "stream was interrupted", "the stream was interrupted", "stream interrupted"
-                            ))
-                            if not is_noise:
-                                err_text = f"AGY [{status}]"
-                                if err_detail:
-                                    err_text += f": {err_detail}"
+                            if "quota reached" in err_str or "subscription" in err_str:
+                                err_text = f"⚠️ Model Quota Reached: {err_detail}. Please switch to another model using the selector in the bottom toolbar (e.g. Gemini 3.7 Flash or Claude)."
                                 err_msg = {"type": "error", "text": err_text, "timestamp": now_iso()}
                                 self.output_buffer.append(err_msg)
                                 await self._broadcast(err_msg)
+                            else:
+                                is_noise = any(k in err_str for k in (
+                                    "declaring permissions", "cortex tool", "invalid tool call error",
+                                    "convert tool call", "grep command timed out", "context deadline exceeded",
+                                    "stream was interrupted", "the stream was interrupted", "stream interrupted"
+                                ))
+                                if not is_noise:
+                                    err_text = f"AGY [{status}]"
+                                    if err_detail:
+                                        err_text += f": {err_detail}"
+                                    err_msg = {"type": "error", "text": err_text, "timestamp": now_iso()}
+                                    self.output_buffer.append(err_msg)
+                                    await self._broadcast(err_msg)
 
             # Drain any leftover buffer
             await flush_text()
