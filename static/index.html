@@ -1492,8 +1492,8 @@
       }
     }
 
-    /* ── Responsive Mobile & Tablet Adjustments ────────────────────────────── */
-    @media (max-width: 1024px) {
+    /* ── Responsive Mobile First Adjustments ────────────────────────────────── */
+    @media (max-width: 600px) {
       header {
         padding: 6px 12px;
         gap: 6px;
@@ -1510,16 +1510,15 @@
         display: none;
       }
       #messages {
-        padding: 10px 12px;
+        padding: 8px 6px;
         gap: 6px;
-        max-width: 100% !important;
-        overflow-x: hidden;
+        max-width: 100%;
       }
       .input-inner {
-        max-width: 100% !important;
+        max-width: 100%;
       }
       #thinking-indicator {
-        max-width: 100% !important;
+        max-width: 100%;
         border-radius: 0;
       }
       #input-area {
@@ -1950,7 +1949,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0015</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0016</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
