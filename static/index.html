@@ -1939,7 +1939,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0012</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0013</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -3847,17 +3847,27 @@
     }, 500);
   }
 
-  // Delay registering auto-reconnect listeners to avoid firing during initial page load
+  // Delay registering auto-reconnect and periodic sync listeners
   setTimeout(() => {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         checkAndReconnect();
+        fetchUsage(false);
       }
     });
 
-    window.addEventListener('focus', checkAndReconnect);
-    window.addEventListener('online', checkAndReconnect);
-    window.addEventListener('pageshow', checkAndReconnect);
+    window.addEventListener('focus', () => {
+      checkAndReconnect();
+      fetchUsage(false);
+    });
+    window.addEventListener('online', () => {
+      checkAndReconnect();
+      fetchUsage(false);
+    });
+    window.addEventListener('pageshow', () => {
+      checkAndReconnect();
+      fetchUsage(false);
+    });
   }, 3000);
 
   // Ping keepalive every 20s
@@ -3868,6 +3878,11 @@
       checkAndReconnect();
     }
   }, 20000);
+
+  // Periodic background quota sync every 60s
+  setInterval(() => {
+    fetchUsage(false);
+  }, 60000);
 
 </script>
 </body>
