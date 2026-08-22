@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0006")
+app = FastAPI(title="AGY Relay", version="v202608.0007")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -313,12 +313,13 @@ class AgySession:
                         status = res.get("status", "")
                         err_detail = res.get("error", "")
                         if status not in ("SUCCESS", ""):
-                            # Filter out non-fatal subscription/quota notices, internal cortex tool errors, and grep timeouts
+                            # Filter out non-fatal subscription/quota notices, internal cortex tool errors, grep timeouts, and stream interruption notices
                             err_str = str(err_detail or "").lower()
                             is_noise = any(k in err_str for k in (
                                 "quota reached", "subscription", "declaring permissions",
                                 "cortex tool", "invalid tool call error", "convert tool call",
-                                "grep command timed out", "context deadline exceeded"
+                                "grep command timed out", "context deadline exceeded",
+                                "stream was interrupted", "the stream was interrupted", "stream interrupted"
                             ))
                             if not is_noise:
                                 err_text = f"AGY [{status}]"
@@ -340,7 +341,8 @@ class AgySession:
                     is_noise = any(k in lower_line for k in (
                         "deprecationwarning", "timezone", "quota reached", "subscription",
                         "declaring permissions", "cortex tool", "invalid tool call error",
-                        "convert tool call", "grep command timed out", "context deadline exceeded"
+                        "convert tool call", "grep command timed out", "context deadline exceeded",
+                        "stream was interrupted", "the stream was interrupted", "stream interrupted"
                     ))
                     if line and not is_noise:
                         err_msg = {"type": "error", "text": line[:400], "timestamp": now_iso()}
@@ -672,7 +674,8 @@ def load_transcript_messages(conv_id: str) -> list[dict]:
                             "context canceled", "stopped due to server restart",
                             "quota reached", "subscription", "declaring permissions",
                             "cortex tool", "invalid tool call error", "convert tool call",
-                            "grep command timed out", "context deadline exceeded"
+                            "grep command timed out", "context deadline exceeded",
+                            "stream was interrupted", "the stream was interrupted", "stream interrupted"
                         ))
                         if err and not is_noise:
                             messages.append({"type": "error", "text": f"AGY: {err}", "timestamp": time})
