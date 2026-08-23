@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0026")
+app = FastAPI(title="AGY Relay", version="v202608.0027")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -232,8 +232,6 @@ class AgySession:
             cmd += ["--mode", self.mode]
         if self.conv_id:
             cmd += ["--conversation", self.conv_id]
-        else:
-            cmd += ["--continue"]
         cmd += ["--prompt", user_text]
 
         try:

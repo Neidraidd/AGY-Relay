@@ -2172,7 +2172,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0026</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0027</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -3843,7 +3843,30 @@
     sidebarSessionList.innerHTML = '';
     const q = sidebarSearchFilter;
 
-    // Filter non-archived conversations
+    // 1. If currently on a newly created active session without a saved transcript yet, show it at the top
+    const activeSess = sessions[currentSessionId];
+    if (activeSess && (!activeSess.conv_id || !pastConversations.some(c => c.conversation_id === activeSess.conv_id))) {
+      const item = document.createElement('div');
+      item.className = 'sidebar-session-item active';
+
+      const infoDiv = document.createElement('div');
+      infoDiv.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:2px';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'session-item-name';
+      nameSpan.textContent = activeSess.name || `✨ New Session (#${activeSess.session_id})`;
+      infoDiv.appendChild(nameSpan);
+
+      const prevSpan = document.createElement('span');
+      prevSpan.style.cssText = 'font-size:10px;color:var(--accent);font-style:italic';
+      prevSpan.textContent = 'Active • Ready for prompt…';
+      infoDiv.appendChild(prevSpan);
+
+      item.appendChild(infoDiv);
+      sidebarSessionList.appendChild(item);
+    }
+
+    // 2. Filter non-archived conversations
     const convs = pastConversations.filter(c => {
       if (!q) return true;
       return (c.title || '').toLowerCase().includes(q) ||
@@ -3851,7 +3874,7 @@
              (c.conversation_id || '').toLowerCase().includes(q);
     });
 
-    if (convs.length === 0) {
+    if (convs.length === 0 && (!activeSess || activeSess.conv_id)) {
       sidebarSessionList.innerHTML = '<div style="font-size:11px;color:var(--text-3);text-align:center;padding:16px">No active sessions</div>';
       return;
     }
@@ -4029,6 +4052,7 @@
           }
         }
 
+        fetchConversations();
         if (ttsEnabled && lastAgentOutputText) {
           speakText(lastAgentOutputText);
           lastAgentOutputText = '';
