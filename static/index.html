@@ -2165,7 +2165,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0021</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0022</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -2877,6 +2877,7 @@
   // ── Speech-to-Text (STT) Voice Input ─────────────────────────────────────
   let speechRecognizer = null;
   let isRecordingVoice = false;
+  let initialVoicePrefix = '';
 
   function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2887,10 +2888,9 @@
     recog.interimResults = true;
     recog.lang = navigator.language || 'en-US';
 
-    let finalTranscript = '';
-
     recog.onstart = () => {
       isRecordingVoice = true;
+      initialVoicePrefix = inputEl.value ? (inputEl.value.trim() + ' ') : '';
       if (micBtn) {
         micBtn.classList.add('recording');
         micBtn.title = 'Listening… (click to stop)';
@@ -2899,20 +2899,22 @@
     };
 
     recog.onresult = (event) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript + ' ';
-        } else {
-          interim += event.results[i][0].transcript;
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = 0; i < event.results.length; ++i) {
+        const res = event.results[i];
+        if (res && res[0] && res[0].transcript) {
+          if (res.isFinal) {
+            finalTranscript += res[0].transcript + ' ';
+          } else {
+            interimTranscript += res[0].transcript;
+          }
         }
       }
-      const combined = (finalTranscript + interim).trim();
-      if (combined) {
-        inputEl.value = combined;
-        inputEl.style.height = 'auto';
-        inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
-      }
+      const combined = (initialVoicePrefix + finalTranscript + interimTranscript).replace(/\s+/g, ' ');
+      inputEl.value = combined;
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
     };
 
     recog.onerror = (event) => {
