@@ -599,20 +599,73 @@
     }
     .sidebar-session-item:hover .session-item-actions { opacity: 1; }
 
-    .icon-action-btn {
+    .session-menu-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 22px;
-      height: 22px;
-      border-radius: 4px;
-      font-size: 11px;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
       color: var(--text-3);
       cursor: pointer;
-      transition: var(--transition);
+      transition: all 0.15s ease;
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 0;
     }
-    .icon-action-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
-    .icon-action-btn.delete-btn:hover { background: rgba(248,81,73,0.2); color: var(--accent-err); }
+    .session-menu-btn:hover,
+    .session-menu-btn.active {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    .session-dropdown-menu {
+      position: fixed;
+      z-index: 10000;
+      background: #181c24;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 4px;
+      min-width: 140px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      animation: menuFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes menuFadeIn {
+      from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .session-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+      color: var(--text-primary);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.12s ease;
+      user-select: none;
+      font-family: var(--font-ui);
+    }
+    .session-dropdown-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .session-dropdown-item.danger {
+      color: var(--accent-err);
+    }
+    .session-dropdown-item.danger:hover {
+      background: rgba(248, 81, 73, 0.15);
+    }
+    .session-dropdown-item .icon {
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      width: 16px;
+      justify-content: center;
+    }
 
     #sidebar-toggle-btn {
       display: flex;
@@ -2172,7 +2225,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0027</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0028</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -3755,6 +3808,67 @@
     }
   }
 
+  let activeDropdown = null;
+
+  function closeAllDropdowns() {
+    if (activeDropdown) {
+      activeDropdown.remove();
+      activeDropdown = null;
+    }
+    document.querySelectorAll('.session-menu-btn.active').forEach(b => b.classList.remove('active'));
+  }
+
+  // Global listeners to close dropdown menu on outside click or scroll
+  window.addEventListener('click', (e) => {
+    if (!e.target.closest('.session-dropdown-menu') && !e.target.closest('.session-menu-btn')) {
+      closeAllDropdowns();
+    }
+  });
+  window.addEventListener('resize', closeAllDropdowns);
+  window.addEventListener('scroll', closeAllDropdowns, true);
+
+  function openSessionMenu(btn, items) {
+    const isAlreadyOpen = btn.classList.contains('active');
+    closeAllDropdowns();
+    if (isAlreadyOpen) return;
+
+    btn.classList.add('active');
+    const menu = document.createElement('div');
+    menu.className = 'session-dropdown-menu';
+
+    items.forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'session-dropdown-item' + (it.danger ? ' danger' : '');
+      row.innerHTML = `<span class="icon">${it.icon}</span><span>${escapeHtml(it.label)}</span>`;
+      row.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeAllDropdowns();
+        it.action();
+      });
+      menu.appendChild(row);
+    });
+
+    document.body.appendChild(menu);
+    activeDropdown = menu;
+
+    // Position menu relative to button
+    const rect = btn.getBoundingClientRect();
+    const menuWidth = 145;
+    const menuHeight = items.length * 36 + 10;
+    
+    let left = rect.right - menuWidth;
+    if (left < 10) left = rect.left;
+    if (left + menuWidth > window.innerWidth - 10) left = window.innerWidth - menuWidth - 10;
+
+    let top = rect.bottom + 4;
+    if (top + menuHeight > window.innerHeight - 10) {
+      top = rect.top - menuHeight - 4;
+    }
+
+    menu.style.left = `${Math.max(10, Math.round(left))}px`;
+    menu.style.top = `${Math.max(10, Math.round(top))}px`;
+  }
+
   async function archiveConversation(convId, archiveState = true) {
     try {
       await fetch(`${BASE_URL}/api/conversations/${convId}/archive`, {
@@ -3795,6 +3909,35 @@
     }
   }
 
+  async function deleteConversation(convId, title) {
+    const confirmName = title || convId.slice(0, 12);
+    if (!confirm(`Are you sure you want to permanently delete "${confirmName}"?`)) return;
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/conversations/${convId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast(`Deleted session "${confirmName}"`, 'info');
+        if (sessions[currentSessionId]?.conv_id === convId) {
+          if (ws) { ws.close(); ws = null; }
+          currentSessionId = null;
+          messagesEl.innerHTML = '';
+          emptyState.style.display = 'flex';
+          setStatus('error', 'Disconnected');
+        }
+        await fetchConversations();
+        if (isArchiveOpen) await fetchArchivedConversations();
+        renderSessionTabs();
+      } else {
+        toast(`Delete failed: ${data.error || 'unknown'}`, 'error');
+      }
+    } catch (e) {
+      toast(`Delete error: ${e.message}`, 'error');
+    }
+  }
+
   function renderArchiveList() {
     sidebarArchiveList.innerHTML = '';
     if (archivedConversations.length === 0) {
@@ -3820,15 +3963,25 @@
       const actionsDiv = document.createElement('div');
       actionsDiv.className = 'session-item-actions';
 
-      const unarchiveBtn = document.createElement('span');
-      unarchiveBtn.className = 'icon-action-btn';
-      unarchiveBtn.innerHTML = '📤';
-      unarchiveBtn.title = 'Unarchive Session';
-      unarchiveBtn.addEventListener('click', e => {
+      const menuBtn = document.createElement('button');
+      menuBtn.className = 'session-menu-btn';
+      menuBtn.title = 'Session Options';
+      menuBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="2"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
+          <circle cx="12" cy="19" r="2"></circle>
+        </svg>
+      `;
+      menuBtn.addEventListener('click', e => {
         e.stopPropagation();
-        archiveConversation(c.conversation_id, false);
+        openSessionMenu(menuBtn, [
+          { icon: '📤', label: 'Unarchive', action: () => archiveConversation(c.conversation_id, false) },
+          { icon: '✏️', label: 'Edit name', action: () => renameConversation(c.conversation_id, c.title) },
+          { icon: '🗑️', label: 'Delete', danger: true, action: () => deleteConversation(c.conversation_id, c.title) }
+        ]);
       });
-      actionsDiv.appendChild(unarchiveBtn);
+      actionsDiv.appendChild(menuBtn);
 
       item.appendChild(actionsDiv);
       item.addEventListener('click', () => {
@@ -3863,6 +4016,29 @@
       infoDiv.appendChild(prevSpan);
 
       item.appendChild(infoDiv);
+
+      const actionsDiv = document.createElement('div');
+      actionsDiv.className = 'session-item-actions';
+
+      const menuBtn = document.createElement('button');
+      menuBtn.className = 'session-menu-btn';
+      menuBtn.title = 'Session Options';
+      menuBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="2"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
+          <circle cx="12" cy="19" r="2"></circle>
+        </svg>
+      `;
+      menuBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        openSessionMenu(menuBtn, [
+          { icon: '🗑️', label: 'Close session', danger: true, action: () => removeSession(activeSess.session_id) }
+        ]);
+      });
+      actionsDiv.appendChild(menuBtn);
+      item.appendChild(actionsDiv);
+
       sidebarSessionList.appendChild(item);
     }
 
@@ -3903,25 +4079,25 @@
       const actionsDiv = document.createElement('div');
       actionsDiv.className = 'session-item-actions';
 
-      const editBtn = document.createElement('span');
-      editBtn.className = 'icon-action-btn';
-      editBtn.innerHTML = '✏️';
-      editBtn.title = 'Rename Session';
-      editBtn.addEventListener('click', e => {
+      const menuBtn = document.createElement('button');
+      menuBtn.className = 'session-menu-btn';
+      menuBtn.title = 'Session Options';
+      menuBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="2"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
+          <circle cx="12" cy="19" r="2"></circle>
+        </svg>
+      `;
+      menuBtn.addEventListener('click', e => {
         e.stopPropagation();
-        renameConversation(c.conversation_id, c.title);
+        openSessionMenu(menuBtn, [
+          { icon: '✏️', label: 'Edit name', action: () => renameConversation(c.conversation_id, c.title) },
+          { icon: '📦', label: 'Archive', action: () => archiveConversation(c.conversation_id, true) },
+          { icon: '🗑️', label: 'Delete', danger: true, action: () => deleteConversation(c.conversation_id, c.title) }
+        ]);
       });
-      actionsDiv.appendChild(editBtn);
-
-      const archiveBtn = document.createElement('span');
-      archiveBtn.className = 'icon-action-btn';
-      archiveBtn.innerHTML = '📦';
-      archiveBtn.title = 'Archive Session';
-      archiveBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        archiveConversation(c.conversation_id, true);
-      });
-      actionsDiv.appendChild(archiveBtn);
+      actionsDiv.appendChild(menuBtn);
 
       item.appendChild(actionsDiv);
       item.addEventListener('click', () => {
