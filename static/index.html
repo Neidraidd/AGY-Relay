@@ -2165,7 +2165,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0020</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0021</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -3171,27 +3171,32 @@
 
   let inlineThinkingEl = null;
 
+  function ensureInlineThinking() {
+    if (!isThinking) return;
+    if (!inlineThinkingEl) {
+      inlineThinkingEl = document.createElement('div');
+      inlineThinkingEl.id = 'inline-thinking';
+      inlineThinkingEl.className = 'msg-group agent thinking-group';
+      inlineThinkingEl.innerHTML = `
+        <div class="thinking-bubble">
+          <div class="thinking-dots"><span></span><span></span><span></span></div>
+        </div>
+      `;
+    }
+    if (messagesEl.lastElementChild !== inlineThinkingEl) {
+      messagesEl.appendChild(inlineThinkingEl);
+      scrollToBottom();
+    }
+  }
+
   function setThinking(val) {
-    isThinking = val;
+    isThinking = !!val;
     if (interruptBtn) {
-      interruptBtn.classList.toggle('visible', val);
+      interruptBtn.classList.toggle('visible', isThinking);
     }
 
-    if (val) {
-      if (!inlineThinkingEl) {
-        inlineThinkingEl = document.createElement('div');
-        inlineThinkingEl.id = 'inline-thinking';
-        inlineThinkingEl.className = 'msg-group agent thinking-group';
-        inlineThinkingEl.innerHTML = `
-          <div class="thinking-bubble">
-            <div class="thinking-dots"><span></span><span></span><span></span></div>
-          </div>
-        `;
-      }
-      if (!messagesEl.contains(inlineThinkingEl)) {
-        messagesEl.appendChild(inlineThinkingEl);
-        scrollToBottom();
-      }
+    if (isThinking) {
+      ensureInlineThinking();
     } else {
       if (inlineThinkingEl && inlineThinkingEl.parentNode) {
         inlineThinkingEl.parentNode.removeChild(inlineThinkingEl);
@@ -3294,17 +3299,12 @@
     // Hide empty state
     emptyState.style.display = 'none';
 
-    // ONLY remove inline thinking indicator when an actual response/error message or turn done arrives
-    if (msg.type === 'output' || msg.type === 'error' || msg.type === 'done') {
-      if (inlineThinkingEl && inlineThinkingEl.parentNode) {
-        inlineThinkingEl.parentNode.removeChild(inlineThinkingEl);
-      }
-      inlineThinkingEl = null;
-    }
-
     if (msg.type === 'history') {
       // Bulk insert history
       msg.messages.forEach(m => appendSingleMessage(m));
+      if (isThinking) {
+        ensureInlineThinking();
+      }
       // Force instantaneous jump to the bottom
       messagesEl.scrollTop = messagesEl.scrollHeight;
       return;
@@ -3312,9 +3312,9 @@
 
     appendSingleMessage(msg);
 
-    // Keep the inline 3-dot thinking indicator pinned at the very bottom while agent is working
-    if (isThinking && inlineThinkingEl && (msg.type === 'tool' || msg.type === 'user')) {
-      messagesEl.appendChild(inlineThinkingEl);
+    // Keep the inline 3-dot thinking indicator pinned at the very bottom as long as AGY is working
+    if (isThinking) {
+      ensureInlineThinking();
     }
 
     scrollToBottom();
@@ -4082,6 +4082,11 @@
             localStorage.setItem(`awp_cache_messages_${sessionId}`, JSON.stringify(data.messages));
           } catch(e){}
         }
+        if (data && data.busy) {
+          setThinking(true);
+        } else if (data && !data.busy && isThinking) {
+          setThinking(false);
+        }
       })
       .catch(e => console.warn('Could not pre-fetch session history', e));
 
@@ -4137,6 +4142,11 @@
         messagesEl.innerHTML = '';
         emptyState.style.display = 'none';
         appendMessage(msg);
+        if (msg.busy) {
+          setThinking(true);
+        } else if (msg.busy === false && isThinking) {
+          setThinking(false);
+        }
         try {
           localStorage.setItem(`awp_cache_messages_${sessionId}`, JSON.stringify(msg.messages || []));
         } catch(e){}
@@ -4526,25 +4536,45 @@
     }, 500);
   }
 
+  function syncSessionBusyState() {
+    if (!currentSessionId) return;
+    fetch(`${BASE_URL}/api/sessions/${currentSessionId}/history`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          if (data.busy) {
+            setThinking(true);
+          } else if (!data.busy && isThinking) {
+            setThinking(false);
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
   // Delay registering auto-reconnect and periodic sync listeners
   setTimeout(() => {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         checkAndReconnect();
+        syncSessionBusyState();
         fetchUsage(false);
       }
     });
 
     window.addEventListener('focus', () => {
       checkAndReconnect();
+      syncSessionBusyState();
       fetchUsage(false);
     });
     window.addEventListener('online', () => {
       checkAndReconnect();
+      syncSessionBusyState();
       fetchUsage(false);
     });
     window.addEventListener('pageshow', () => {
       checkAndReconnect();
+      syncSessionBusyState();
       fetchUsage(false);
     });
   }, 3000);

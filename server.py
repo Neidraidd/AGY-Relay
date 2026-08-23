@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0020")
+app = FastAPI(title="AGY Relay", version="v202608.0021")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -549,14 +549,18 @@ async def rename_session(session_id: str, body: dict = None):
 @app.get("/api/sessions/{session_id}/history")
 async def get_history(session_id: str):
     if session_id not in sessions:
-        return JSONResponse({"messages": []}, status_code=404)
+        return JSONResponse({"messages": [], "busy": False}, status_code=404)
     session = sessions[session_id]
-    if session.conv_id:
+    if session.conv_id and not session.busy:
         latest = load_transcript_messages(session.conv_id)
         if latest:
             session.output_buffer = latest
             session.save_to_disk()
-    return {"messages": session.output_buffer}
+    return {
+        "messages": session.output_buffer,
+        "busy": session.busy,
+        "queue_length": len(session.message_queue)
+    }
 
 
 @app.delete("/api/sessions/{session_id}")
@@ -890,12 +894,19 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     session = sessions[session_id]
     session.add_client(websocket)
 
-    # Replay history
-    if session.output_buffer:
-        print(f"[WS] Replaying {len(session.output_buffer)} messages to client for session {session_id}", flush=True)
+    # Replay history and busy state
+    print(f"[WS] Replaying {len(session.output_buffer)} messages (busy={session.busy}) to client for session {session_id}", flush=True)
+    await websocket.send_json({
+        "type": "history",
+        "messages": session.output_buffer,
+        "busy": session.busy,
+    })
+
+    # If currently working/busy, notify client immediately so 3 dots appear
+    if session.busy:
         await websocket.send_json({
-            "type": "history",
-            "messages": session.output_buffer,
+            "type": "thinking_pulse",
+            "timestamp": now_iso()
         })
 
     # Replay active queue status
