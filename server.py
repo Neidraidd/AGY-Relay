@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0024")
+app = FastAPI(title="AGY Relay", version="v202608.0025")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -411,6 +411,11 @@ class AgySession:
                 "tokens": approx_tokens,
                 "tps": f"{tps} t/s"
             }
+            if last_output_idx is None:
+                for idx in range(len(self.output_buffer) - 1, -1, -1):
+                    if self.output_buffer[idx].get("type") == "output":
+                        last_output_idx = idx
+                        break
             if last_output_idx is not None and last_output_idx < len(self.output_buffer):
                 self.output_buffer[last_output_idx]["stats"] = stats
 

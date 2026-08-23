@@ -1230,27 +1230,34 @@
       gap: 8px;
       margin-top: 10px;
       padding-top: 6px;
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       font-size: 11px;
-      color: var(--text-3);
+      color: var(--text-2);
       font-family: var(--font-mono);
       user-select: none;
     }
     .bubble-stats {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 5px;
-      color: var(--text-3);
-      font-size: 10.5px;
+      gap: 6px;
+      color: var(--text-2);
+      font-size: 11px;
+      font-weight: 500;
     }
     .bubble-stat {
       display: inline-flex;
       align-items: center;
       gap: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
     }
     .bubble-stat-dot {
-      opacity: 0.35;
+      opacity: 0.4;
       font-size: 8px;
+      color: var(--text-3);
     }
     .bubble-footer-actions {
       display: flex;
@@ -2165,7 +2172,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0024</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0025</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -3220,6 +3227,62 @@
     scrollToBottom();
   }
 
+  function createBubbleFooter(stats, text) {
+    const footer = document.createElement('div');
+    footer.className = 'bubble-footer';
+
+    let statsHtml = '';
+    if (stats && (stats.tps || stats.duration)) {
+      const tps = stats.tps ? `<span class="bubble-stat" title="Tokens per second">⚡ ${escapeHtml(stats.tps)}</span>` : '';
+      const dur = stats.duration ? `<span class="bubble-stat" title="Turn duration">⏱️ ${escapeHtml(stats.duration)}</span>` : '';
+      const dot = (tps && dur) ? '<span class="bubble-stat-dot">•</span>' : '';
+      statsHtml = `${tps}${dot}${dur}`;
+    }
+
+    footer.innerHTML = `
+      <div class="bubble-stats">${statsHtml}</div>
+      <div class="bubble-footer-actions">
+        <button class="tts-speaker-btn" title="Read Aloud">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <span class="tts-btn-label">Listen</span>
+        </button>
+        <button class="bubble-copy-btn" title="Copy response">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    const ttsBtn = footer.querySelector('.tts-speaker-btn');
+    if (ttsBtn) {
+      ttsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        speakText(text, ttsBtn);
+      });
+    }
+
+    const copyBtn = footer.querySelector('.bubble-copy-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(text);
+          toast('Response copied to clipboard', 'success');
+        } catch(err) {
+          toast('Could not copy to clipboard', 'warn');
+        }
+      });
+    }
+
+    return footer;
+  }
+
   function appendSingleMessage(msg) {
     const type = msg.type || 'output';
 
@@ -3234,17 +3297,19 @@
 
     // Tool execution pills: compact and without premature agent timestamp header
     if (type === 'tool') {
-      const el = document.createElement('div');
-      el.className = 'bubble tool';
-      el.textContent = msg.text;
-
       const lastGroup = messagesEl.lastElementChild;
-      if (lastGroup && lastGroup.classList.contains('msg-group') && lastGroup.classList.contains('agent') && !lastGroup.classList.contains('thinking-group')) {
-        lastGroup.appendChild(el);
+      if (lastGroup && lastGroup.classList.contains('tool-group')) {
+        const pill = document.createElement('div');
+        pill.className = 'bubble tool';
+        pill.textContent = msg.text;
+        lastGroup.appendChild(pill);
       } else {
         const group = document.createElement('div');
-        group.className = 'msg-group agent tool-group';
-        group.appendChild(el);
+        group.className = 'msg-group tool-group';
+        const pill = document.createElement('div');
+        pill.className = 'bubble tool';
+        pill.textContent = msg.text;
+        group.appendChild(pill);
         messagesEl.appendChild(group);
       }
       return;
@@ -3263,9 +3328,14 @@
       !lastGroup.classList.contains('thinking-group') &&
       !isUser
     ) {
+      lastAgentOutputText = msg.text;
+      // Remove any previous footers in this group so there is only one at the bottom
+      lastGroup.querySelectorAll('.bubble-footer').forEach(el => el.remove());
+
       const bubble = document.createElement('div');
       bubble.className = `bubble ${type}`;
       bubble.innerHTML = renderMarkdown(msg.text);
+      bubble.appendChild(createBubbleFooter(msg.stats, msg.text));
       lastGroup.appendChild(bubble);
       scrollToBottom();
       return;
@@ -3289,62 +3359,7 @@
     } else {
       lastAgentOutputText = msg.text;
       bubble.innerHTML = renderMarkdown(msg.text);
-
-      // Append clean response footer at the bottom with stats and TTS listen button
-      const footer = document.createElement('div');
-      footer.className = 'bubble-footer';
-      footer.id = `footer-${Date.now()}`;
-
-      let statsHtml = '';
-      if (msg.stats) {
-        const tps = msg.stats.tps ? `<span class="bubble-stat" title="Tokens per second">⚡ ${escapeHtml(msg.stats.tps)}</span>` : '';
-        const dur = msg.stats.duration ? `<span class="bubble-stat" title="Turn duration">⏱️ ${escapeHtml(msg.stats.duration)}</span>` : '';
-        const dot = (tps && dur) ? '<span class="bubble-stat-dot">•</span>' : '';
-        statsHtml = `${tps}${dot}${dur}`;
-      }
-
-      footer.innerHTML = `
-        <div class="bubble-stats">${statsHtml}</div>
-        <div class="bubble-footer-actions">
-          <button class="tts-speaker-btn" title="Read Aloud">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-            <span class="tts-btn-label">Listen</span>
-          </button>
-          <button class="bubble-copy-btn" title="Copy response">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-            </svg>
-          </button>
-        </div>
-      `;
-
-      const ttsBtn = footer.querySelector('.tts-speaker-btn');
-      if (ttsBtn) {
-        ttsBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          speakText(msg.text, ttsBtn);
-        });
-      }
-
-      const copyBtn = footer.querySelector('.bubble-copy-btn');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          try {
-            await navigator.clipboard.writeText(msg.text);
-            toast('Response copied to clipboard', 'success');
-          } catch(err) {
-            toast('Could not copy to clipboard', 'warn');
-          }
-        });
-      }
-
-      bubble.appendChild(footer);
+      bubble.appendChild(createBubbleFooter(msg.stats, msg.text));
     }
     group.appendChild(bubble);
 
@@ -4001,7 +4016,7 @@
 
         // Update stats on last agent bubble footer if provided
         if (msg.stats) {
-          const statsElements = messagesEl.querySelectorAll('.bubble.output .bubble-stats');
+          const statsElements = messagesEl.querySelectorAll('.msg-group.agent .bubble-stats, .bubble.output .bubble-stats');
           if (statsElements.length > 0) {
             const lastStatsEl = statsElements[statsElements.length - 1];
             const tps = msg.stats.tps ? `<span class="bubble-stat" title="Tokens per second">⚡ ${escapeHtml(msg.stats.tps)}</span>` : '';
