@@ -2172,7 +2172,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0025</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0026</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -3237,6 +3237,9 @@
       const dur = stats.duration ? `<span class="bubble-stat" title="Turn duration">⏱️ ${escapeHtml(stats.duration)}</span>` : '';
       const dot = (tps && dur) ? '<span class="bubble-stat-dot">•</span>' : '';
       statsHtml = `${tps}${dot}${dur}`;
+    } else if (text && text.trim()) {
+      const estTokens = Math.max(1, Math.round(text.trim().length / 4));
+      statsHtml = `<span class="bubble-stat" title="Estimated Tokens">⚡ ~${estTokens} tok</span>`;
     }
 
     footer.innerHTML = `
