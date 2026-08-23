@@ -2165,7 +2165,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0022</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0023</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -2877,9 +2877,9 @@
   // ── Speech-to-Text (STT) Voice Input ─────────────────────────────────────
   let speechRecognizer = null;
   let isRecordingVoice = false;
-  let initialVoicePrefix = '';
+  let voiceFinalTranscript = '';
 
-  function initSpeechRecognition() {
+  function createSpeechRecognizer() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
 
@@ -2889,46 +2889,65 @@
     recog.lang = navigator.language || 'en-US';
 
     recog.onstart = () => {
-      isRecordingVoice = true;
-      initialVoicePrefix = inputEl.value ? (inputEl.value.trim() + ' ') : '';
       if (micBtn) {
         micBtn.classList.add('recording');
         micBtn.title = 'Listening… (click to stop)';
       }
-      inputEl.setAttribute('placeholder', '🎙️ Listening… Speak your prompt');
+      inputEl.setAttribute('placeholder', '🎙️ Listening… Speak your prompt (click mic to stop)');
     };
 
     recog.onresult = (event) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
+      let segFinal = '';
+      let segInterim = '';
+
       for (let i = 0; i < event.results.length; ++i) {
         const res = event.results[i];
         if (res && res[0] && res[0].transcript) {
           if (res.isFinal) {
-            finalTranscript += res[0].transcript + ' ';
+            segFinal += res[0].transcript + ' ';
           } else {
-            interimTranscript += res[0].transcript;
+            segInterim += res[0].transcript;
           }
         }
       }
-      const combined = (initialVoicePrefix + finalTranscript + interimTranscript).replace(/\s+/g, ' ');
-      inputEl.value = combined;
-      inputEl.style.height = 'auto';
-      inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
+
+      const combined = [voiceFinalTranscript, segFinal, segInterim]
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (combined) {
+        inputEl.value = combined;
+        inputEl.style.height = 'auto';
+        inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
+      }
     };
 
     recog.onerror = (event) => {
-      console.warn('Voice input error:', event.error);
-      stopVoiceInput();
+      console.warn('Voice input event error:', event.error);
       if (event.error === 'not-allowed') {
         toast('Microphone permission denied.', 'error');
-      } else if (event.error !== 'no-speech') {
-        toast(`Voice error: ${event.error}`, 'warn');
+        stopVoiceInput();
       }
     };
 
     recog.onend = () => {
-      stopVoiceInput();
+      // If still recording (browser paused on silence), commit current text and auto-restart immediately
+      if (isRecordingVoice) {
+        voiceFinalTranscript = inputEl.value.trim();
+        try {
+          recog.start();
+        } catch(e) {
+          setTimeout(() => {
+            if (isRecordingVoice) {
+              try { recog.start(); } catch(err){}
+            }
+          }, 120);
+        }
+      } else {
+        stopVoiceInput();
+      }
     };
 
     return recog;
@@ -2943,9 +2962,14 @@
 
     if (isRecordingVoice) {
       stopVoiceInput();
+      toast('Voice input stopped', 'info');
     } else {
+      isRecordingVoice = true;
+      voiceFinalTranscript = inputEl.value.trim();
       try {
-        speechRecognizer = initSpeechRecognition();
+        if (!speechRecognizer) {
+          speechRecognizer = createSpeechRecognizer();
+        }
         if (speechRecognizer) {
           speechRecognizer.start();
         }
@@ -2960,7 +2984,6 @@
     isRecordingVoice = false;
     if (speechRecognizer) {
       try { speechRecognizer.stop(); } catch(e){}
-      speechRecognizer = null;
     }
     if (micBtn) {
       micBtn.classList.remove('recording');
