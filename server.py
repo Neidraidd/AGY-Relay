@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0017")
+app = FastAPI(title="AGY Relay", version="v202608.0018")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -184,18 +184,8 @@ class AgySession:
             asyncio.create_task(self.run_turn(user_text, queue_id=queue_id))
             return {"status": "running", "id": queue_id, "position": 0}
 
-        # Otherwise add to FIFO queue and echo to chat with queued badge
+        # Otherwise add to FIFO queue without broadcasting to chat history yet
         self.message_queue.append(item)
-        user_msg = {
-            "type": "user",
-            "text": user_text,
-            "queue_id": queue_id,
-            "queued": True,
-            "queue_pos": len(self.message_queue),
-            "timestamp": now_iso()
-        }
-        self.output_buffer.append(user_msg)
-        await self._broadcast(user_msg)
         await self._broadcast({
             "type": "queue_status",
             "queue_length": len(self.message_queue),
@@ -208,10 +198,6 @@ class AgySession:
     def cancel_queued_message(self, queue_id: str) -> bool:
         initial_len = len(self.message_queue)
         self.message_queue = [m for m in self.message_queue if m["id"] != queue_id]
-        for msg in self.output_buffer:
-            if msg.get("queue_id") == queue_id:
-                msg["cancelled"] = True
-                msg["queued"] = False
         return len(self.message_queue) < initial_len
 
     # ── run one turn ───────────────────────────────────────────────────────
@@ -231,29 +217,10 @@ class AgySession:
         self.busy = True
         self.last_turn_time = now
 
-        # If this turn was previously queued in the UI, update its state or broadcast
-        if queue_id:
-            found = False
-            for msg in self.output_buffer:
-                if msg.get("queue_id") == queue_id:
-                    msg["queued"] = False
-                    found = True
-                    break
-            if not found:
-                user_msg = {"type": "user", "text": user_text, "timestamp": now_iso()}
-                self.output_buffer.append(user_msg)
-                await self._broadcast(user_msg)
-            else:
-                await self._broadcast({
-                    "type": "queue_started",
-                    "id": queue_id,
-                    "timestamp": now_iso()
-                })
-        else:
-            user_msg = {"type": "user", "text": user_text, "timestamp": now_iso()}
-            self.output_buffer.append(user_msg)
-            await self._broadcast(user_msg)
-
+        # Echo user message into chat history now that it is actively executing
+        user_msg = {"type": "user", "text": user_text, "timestamp": now_iso()}
+        self.output_buffer.append(user_msg)
+        await self._broadcast(user_msg)
         await self._broadcast({"type": "thinking_pulse", "timestamp": now_iso()})
 
         cmd = [AGY_BIN, "--output-format", "stream-json",
@@ -913,6 +880,15 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         await websocket.send_json({
             "type": "history",
             "messages": session.output_buffer,
+        })
+
+    # Replay active queue status
+    if session.message_queue:
+        await websocket.send_json({
+            "type": "queue_status",
+            "queue_length": len(session.message_queue),
+            "queued_messages": session.message_queue,
+            "timestamp": now_iso()
         })
 
     try:
