@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0019")
+app = FastAPI(title="AGY Relay", version="v202608.0020")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -245,19 +245,24 @@ class AgySession:
             )
             self.active_proc = proc
 
+            turn_start_time = time.time()
+            total_chars = 0
             current_text = ""
             streamed_any = False
+            last_output_idx = None
 
             async def flush_text():
-                nonlocal current_text, streamed_any
+                nonlocal current_text, streamed_any, total_chars, last_output_idx
                 t = current_text.rstrip("\n")
                 if t.strip():
                     lower_t = t.lower()
                     if "stream was interrupted" in lower_t or "the stream was interrupted" in lower_t:
                         current_text = ""
                         return
+                    total_chars += len(t)
                     msg = {"type": "output", "text": t, "timestamp": now_iso()}
                     self.output_buffer.append(msg)
+                    last_output_idx = len(self.output_buffer) - 1
                     await self._broadcast(msg)
                     streamed_any = True
                 current_text = ""
@@ -398,8 +403,19 @@ class AgySession:
         finally:
             self.active_proc = None
             self.busy = False
+            turn_elapsed = max(0.1, round(time.time() - turn_start_time, 2))
+            approx_tokens = max(1, int(total_chars / 4))
+            tps = round(approx_tokens / turn_elapsed, 1)
+            stats = {
+                "duration": f"{turn_elapsed:.1f}s",
+                "tokens": approx_tokens,
+                "tps": f"{tps} t/s"
+            }
+            if last_output_idx is not None and last_output_idx < len(self.output_buffer):
+                self.output_buffer[last_output_idx]["stats"] = stats
+
             self.save_to_disk()
-            await self._broadcast({"type": "done", "timestamp": now_iso()})
+            await self._broadcast({"type": "done", "stats": stats, "timestamp": now_iso()})
 
             # Check if there are queued messages waiting to execute next
             if self.message_queue:

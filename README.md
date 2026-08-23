@@ -1,6 +1,6 @@
 # AGY Relay ⚡
 
-[![Version](https://img.shields.io/badge/version-v202608.0019-blue.svg)](https://github.com/Neidraidd/AGY-Relay)
+[![Version](https://img.shields.io/badge/version-v202608.0020-blue.svg)](https://github.com/Neidraidd/AGY-Relay)
 [![Status](https://img.shields.io/badge/status-in--development-orange.svg)](https://github.com/Neidraidd/AGY-Relay)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 

@@ -1222,34 +1222,82 @@
       50% { transform: scale(1.08); opacity: 0.8; }
     }
 
-    .msg-label-actions {
+    /* ── Response Bubble Footer (Stats + TTS + Actions) ─────────────── */
+    .bubble-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      font-size: 11px;
+      color: var(--text-3);
+      font-family: var(--font-mono);
+      user-select: none;
+    }
+    .bubble-stats {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-3);
+      font-size: 10.5px;
+    }
+    .bubble-stat {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 3px;
+    }
+    .bubble-stat-dot {
+      opacity: 0.35;
+      font-size: 8px;
+    }
+    .bubble-footer-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
     }
     .tts-speaker-btn {
-      background: transparent;
-      border: none;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-2);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      font-family: var(--font-ui);
+    }
+    .tts-speaker-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .tts-speaker-btn.speaking {
+      background: rgba(34, 197, 94, 0.15);
+      border-color: rgba(34, 197, 94, 0.4);
+      color: #22c55e;
+      animation: micPulse 1.2s infinite ease-in-out;
+    }
+    .bubble-copy-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       color: var(--text-3);
       cursor: pointer;
-      font-size: 11.5px;
-      padding: 1px 4px;
-      border-radius: 4px;
+      padding: 3px 6px;
+      border-radius: 6px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      transition: color 0.15s ease, background 0.15s ease;
-      opacity: 0.65;
+      transition: all 0.15s ease;
     }
-    .tts-speaker-btn:hover {
-      opacity: 1;
-      color: var(--accent);
-      background: rgba(255, 255, 255, 0.08);
-    }
-    .tts-speaker-btn.speaking {
-      color: #22c55e;
-      opacity: 1;
-      animation: micPulse 1.2s infinite ease-in-out;
+    .bubble-copy-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
     }
 
     /* ── Modern Send Button ──────────────────────────────────────────── */
@@ -2117,7 +2165,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0019</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0020</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -2157,8 +2205,14 @@
             ></textarea>
             <div class="input-actions">
               <input type="file" id="file-input" accept="image/*" multiple style="display:none" />
-              <button id="mic-btn" class="input-icon-btn" title="Voice Input (Speech-to-Text)" type="button">🎙️</button>
               <button id="interrupt-btn" title="Stop AGY (Ctrl+C)" type="button">⏹</button>
+              <button id="mic-btn" class="input-icon-btn" title="Voice Input (Speech-to-Text)" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="22"></line>
+                </svg>
+              </button>
               <button id="send-btn" title="Send message (Enter)" aria-label="Send" type="button">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="12" y1="19" x2="12" y2="5"></line>
@@ -2202,7 +2256,10 @@
             <div class="prompt-toolbar-right">
               <!-- Attachment button on bottom right -->
               <div class="toolbar-item" id="toolbar-attach-btn" title="Attach image / file">
-                <span>📎</span> <span>Attach</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+                <span>Attach</span>
               </div>
             </div>
           </div>
@@ -2763,8 +2820,9 @@
     if (window.speechSynthesis.speaking) {
       window.speechSynthesis.cancel();
       if (currentSpeakingBtn) {
-        currentSpeakingBtn.textContent = '🔊';
         currentSpeakingBtn.classList.remove('speaking');
+        const l = currentSpeakingBtn.querySelector('.tts-btn-label');
+        if (l) l.textContent = 'Listen';
         currentSpeakingBtn.title = 'Read Aloud';
       }
       if (currentSpeakingBtn === btnElement && btnElement) {
@@ -2786,15 +2844,17 @@
 
     if (btnElement) {
       currentSpeakingBtn = btnElement;
-      btnElement.textContent = '⏹️';
       btnElement.classList.add('speaking');
+      const l = btnElement.querySelector('.tts-btn-label');
+      if (l) l.textContent = 'Stop';
       btnElement.title = 'Stop Reading';
     }
 
     utterance.onend = () => {
       if (btnElement) {
-        btnElement.textContent = '🔊';
         btnElement.classList.remove('speaking');
+        const l = btnElement.querySelector('.tts-btn-label');
+        if (l) l.textContent = 'Listen';
         btnElement.title = 'Read Aloud';
       }
       currentSpeakingBtn = null;
@@ -2803,8 +2863,9 @@
     utterance.onerror = (e) => {
       console.warn('TTS error:', e);
       if (btnElement) {
-        btnElement.textContent = '🔊';
         btnElement.classList.remove('speaking');
+        const l = btnElement.querySelector('.tts-btn-label');
+        if (l) l.textContent = 'Listen';
         btnElement.title = 'Read Aloud';
       }
       currentSpeakingBtn = null;
@@ -3316,24 +3377,9 @@
 
     const label = document.createElement('div');
     label.className = 'msg-label';
-    if (isUser) {
-      label.innerHTML = `<span>You</span><span>${fmtTime(msg.timestamp)}</span>`;
-    } else {
-      label.innerHTML = `
-        <div class="msg-label-actions">
-          <span>⚡ AGY</span>
-          <button class="tts-speaker-btn" title="Read Aloud">🔊</button>
-        </div>
-        <span>${fmtTime(msg.timestamp)}</span>
-      `;
-      const ttsBtn = label.querySelector('.tts-speaker-btn');
-      if (ttsBtn) {
-        ttsBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          speakText(msg.text, ttsBtn);
-        });
-      }
-    }
+    label.innerHTML = isUser
+      ? `<span>You</span><span>${fmtTime(msg.timestamp)}</span>`
+      : `<span>⚡ AGY</span><span>${fmtTime(msg.timestamp)}</span>`;
     group.appendChild(label);
 
     const bubble = document.createElement('div');
@@ -3343,6 +3389,62 @@
     } else {
       lastAgentOutputText = msg.text;
       bubble.innerHTML = renderMarkdown(msg.text);
+
+      // Append clean response footer at the bottom with stats and TTS listen button
+      const footer = document.createElement('div');
+      footer.className = 'bubble-footer';
+      footer.id = `footer-${Date.now()}`;
+
+      let statsHtml = '';
+      if (msg.stats) {
+        const tps = msg.stats.tps ? `<span class="bubble-stat" title="Tokens per second">⚡ ${escapeHtml(msg.stats.tps)}</span>` : '';
+        const dur = msg.stats.duration ? `<span class="bubble-stat" title="Turn duration">⏱️ ${escapeHtml(msg.stats.duration)}</span>` : '';
+        const dot = (tps && dur) ? '<span class="bubble-stat-dot">•</span>' : '';
+        statsHtml = `${tps}${dot}${dur}`;
+      }
+
+      footer.innerHTML = `
+        <div class="bubble-stats">${statsHtml}</div>
+        <div class="bubble-footer-actions">
+          <button class="tts-speaker-btn" title="Read Aloud">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <span class="tts-btn-label">Listen</span>
+          </button>
+          <button class="bubble-copy-btn" title="Copy response">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+            </svg>
+          </button>
+        </div>
+      `;
+
+      const ttsBtn = footer.querySelector('.tts-speaker-btn');
+      if (ttsBtn) {
+        ttsBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          speakText(msg.text, ttsBtn);
+        });
+      }
+
+      const copyBtn = footer.querySelector('.bubble-copy-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          try {
+            await navigator.clipboard.writeText(msg.text);
+            toast('Response copied to clipboard', 'success');
+          } catch(err) {
+            toast('Could not copy to clipboard', 'warn');
+          }
+        });
+      }
+
+      bubble.appendChild(footer);
     }
     group.appendChild(bubble);
 
@@ -3991,6 +4093,19 @@
       if (msg.type === 'done') {
         setThinking(false);
         fetchUsage(false);
+
+        // Update stats on last agent bubble footer if provided
+        if (msg.stats) {
+          const statsElements = messagesEl.querySelectorAll('.bubble.output .bubble-stats');
+          if (statsElements.length > 0) {
+            const lastStatsEl = statsElements[statsElements.length - 1];
+            const tps = msg.stats.tps ? `<span class="bubble-stat" title="Tokens per second">⚡ ${escapeHtml(msg.stats.tps)}</span>` : '';
+            const dur = msg.stats.duration ? `<span class="bubble-stat" title="Turn duration">⏱️ ${escapeHtml(msg.stats.duration)}</span>` : '';
+            const dot = (tps && dur) ? '<span class="bubble-stat-dot">•</span>' : '';
+            lastStatsEl.innerHTML = `${tps}${dot}${dur}`;
+          }
+        }
+
         if (ttsEnabled && lastAgentOutputText) {
           speakText(lastAgentOutputText);
           lastAgentOutputText = '';
