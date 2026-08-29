@@ -73,7 +73,7 @@ def save_archived_id(conv_id: str, archived: bool):
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0028")
+app = FastAPI(title="AGY Relay", version="v202608.0029")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -100,9 +100,9 @@ class AgySession:
     `agy --print --output-format stream-json --continue`.
     """
 
-    def __init__(self, session_id: str, workspace: str = WORKSPACE, model: str = "", conv_id: Optional[str] = None, output_buffer: Optional[list] = None, created_at: Optional[str] = None, name: Optional[str] = None, archived: bool = False, mode: str = ""):
+    def __init__(self, session_id: str, workspace: str = WORKSPACE, model: str = "", conv_id: Optional[str] = None, output_buffer: Optional[list] = None, created_at: Optional[str] = None, name: Optional[str] = None, archived: bool = False, mode: str = "", last_turn_time: Optional[float] = None):
         self.session_id    = session_id
-        self.name          = name or f"Session {session_id}"
+        self.name          = name or f"Session #{session_id}"
         self.workspace     = workspace
         self.model         = model
         self.mode          = mode      # "", "plan", "accept-edits"
@@ -110,7 +110,7 @@ class AgySession:
         self.websockets: list[WebSocket] = []
         self.output_buffer: list[dict] = output_buffer if output_buffer is not None else []
         self.busy          = False
-        self.last_turn_time: float = 0
+        self.last_turn_time: float = float(last_turn_time) if last_turn_time is not None else 0.0
         self.created_at    = created_at or now_iso()
         self.archived      = archived
         self.message_queue: list[dict] = []  # FIFO queue of {"id": str, "text": str, "timestamp": str}
@@ -128,6 +128,7 @@ class AgySession:
                 "conv_id": self.conv_id,
                 "created_at": self.created_at,
                 "archived": self.archived,
+                "last_turn_time": self.last_turn_time,
                 "output_buffer": self.output_buffer,
             }
             with open(filepath, "w", encoding="utf-8") as f:
@@ -149,7 +150,8 @@ class AgySession:
                 output_buffer=data.get("output_buffer", []),
                 created_at=data.get("created_at"),
                 archived=data.get("archived", False),
-                mode=data.get("mode", "")
+                mode=data.get("mode", ""),
+                last_turn_time=data.get("last_turn_time", 0.0)
             )
         except Exception as e:
             print(f"[ERROR] Failed to load session from {filepath}: {e}")
@@ -216,6 +218,12 @@ class AgySession:
 
         self.busy = True
         self.last_turn_time = now
+
+        # Auto-title session from first user message if still using default title
+        if self.name.startswith("Session #") or self.name.startswith("Session "):
+            first_line = user_text.strip().split("\n")[0].strip()
+            if first_line:
+                self.name = first_line[:40]
 
         # Echo user message into chat history now that it is actively executing
         user_msg = {"type": "user", "text": user_text, "timestamp": now_iso()}
@@ -342,7 +350,10 @@ class AgySession:
                 elif event_type == "result":
                     res = ev.get("result")
                     if isinstance(res, dict):
-                        self.conv_id = res.get("conversation_id") or self.conv_id
+                        cid = res.get("conversation_id") or ev.get("conversation_id")
+                        if cid:
+                            self.conv_id = cid
+                            self.save_to_disk()
                         # If no text step was emitted during turn, fallback to final response
                         if not streamed_any and not current_text.strip():
                             final = res.get("response", "").strip()
@@ -418,7 +429,13 @@ class AgySession:
                 self.output_buffer[last_output_idx]["stats"] = stats
 
             self.save_to_disk()
-            await self._broadcast({"type": "done", "stats": stats, "timestamp": now_iso()})
+            await self._broadcast({
+                "type": "done",
+                "stats": stats,
+                "conv_id": self.conv_id,
+                "name": self.name,
+                "timestamp": now_iso()
+            })
 
             # Check if there are queued messages waiting to execute next
             if self.message_queue:
@@ -598,8 +615,8 @@ async def archive_conversation(conv_id: str, body: dict = None):
     save_archived_id(conv_id, archive_state)
 
     # 2. Also update session in-memory and on-disk if active
-    for s in sessions.values():
-        if s.conv_id == conv_id:
+    for sid, s in list(sessions.items()):
+        if sid == conv_id or s.conv_id == conv_id:
             s.archived = archive_state
             s.save_to_disk()
 
@@ -621,67 +638,130 @@ async def archive_conversation(conv_id: str, body: dict = None):
 
 @app.get("/api/conversations")
 async def list_conversations(query: str = "", limit: int = 50, archived: bool = False):
-    """List non-archived or archived AGY conversations from conversation_summaries.db."""
-    db_path = Path.home() / ".gemini" / "antigravity-cli" / "conversation_summaries.db"
-    if not db_path.exists():
-        return {"conversations": []}
-    try:
-        archived_ids = get_archived_ids()
-        import sqlite3
-        conn = sqlite3.connect(str(db_path))
-        c = conn.cursor()
-        
-        # Select all conversations, then filter using our permanent archived_ids set
-        if query:
-            q_param = f"%{query}%"
-            c.execute(
-                f"SELECT conversation_id, title, preview, step_count, last_modified_time, status "
-                f"FROM conversation_summaries "
-                f"WHERE (conversation_id LIKE ? OR title LIKE ? OR preview LIKE ?) "
-                f"ORDER BY last_modified_time DESC LIMIT ?",
-                (q_param, q_param, q_param, limit * 2)
-            )
-        else:
-            c.execute(
-                f"SELECT conversation_id, title, preview, step_count, last_modified_time, status "
-                f"FROM conversation_summaries "
-                f"WHERE step_count > 0 "
-                f"ORDER BY last_modified_time DESC LIMIT ?",
-                (limit * 2,)
-            )
-        rows = c.fetchall()
-        conn.close()
+    """List non-archived or archived AGY conversations from conversation_summaries.db and active proxy sessions."""
+    archived_ids = get_archived_ids()
+    convs = []
+    seen_cids = set()
 
-        convs = []
-        for r in rows:
-            cid = r[0]
-            # Considered archived if in JSON store OR marked archived in sqlite
-            is_arch = (cid in archived_ids) or (r[5] == "archived")
-            if is_arch != archived:
+    # 1. Include active proxy sessions first so new sessions never disappear on tab switch
+    def get_sort_key(s):
+        if isinstance(s.last_turn_time, (int, float)) and s.last_turn_time > 0:
+            return s.last_turn_time
+        return 0.0
+
+    for s in sorted(sessions.values(), key=get_sort_key, reverse=True):
+        cid = s.conv_id or s.session_id
+        is_arch = bool((cid in archived_ids) or (s.conv_id and s.conv_id in archived_ids) or s.archived)
+        if is_arch != archived:
+            continue
+        if cid in seen_cids:
+            continue
+        seen_cids.add(cid)
+        if s.conv_id:
+            seen_cids.add(s.conv_id)
+
+        # Extract preview from buffer
+        preview = ""
+        for m in s.output_buffer:
+            if m.get("type") == "user":
+                preview = m.get("text", "")[:80]
+                break
+        if not preview and s.output_buffer:
+            preview = s.output_buffer[-1].get("text", "")[:80]
+
+        title = s.name
+        if not title or title.startswith("Session #"):
+            title = preview or f"Session #{s.session_id}"
+
+        # Match search filter if any
+        if query:
+            q_lower = query.lower()
+            if q_lower not in title.lower() and q_lower not in preview.lower() and q_lower not in str(cid).lower():
                 continue
 
-            convs.append({
-                "conversation_id": cid,
-                "title": r[1] or r[2] or cid[:12],
-                "preview": r[2],
-                "step_count": r[3],
-                "last_modified_time": r[4]
-            })
-            if len(convs) >= limit:
-                break
+        if isinstance(s.last_turn_time, (int, float)) and s.last_turn_time > 0:
+            from datetime import datetime, timezone
+            lmt = datetime.fromtimestamp(s.last_turn_time, timezone.utc).isoformat()
+        else:
+            lmt = s.created_at or now_iso()
 
-        return {"conversations": convs}
-    except Exception as e:
-        return {"conversations": [], "error": str(e)}
+        convs.append({
+            "conversation_id": s.conv_id or s.session_id,
+            "session_id": s.session_id,
+            "title": title,
+            "preview": preview,
+            "step_count": len(s.output_buffer),
+            "last_modified_time": lmt
+        })
+
+    # 2. Query conversation_summaries.db for past CLI conversations
+    db_path = Path.home() / ".gemini" / "antigravity-cli" / "conversation_summaries.db"
+    if db_path.exists():
+        try:
+            import sqlite3
+            conn = sqlite3.connect(str(db_path))
+            c = conn.cursor()
+            
+            if query:
+                q_param = f"%{query}%"
+                c.execute(
+                    f"SELECT conversation_id, title, preview, step_count, last_modified_time, status "
+                    f"FROM conversation_summaries "
+                    f"WHERE (conversation_id LIKE ? OR title LIKE ? OR preview LIKE ?) "
+                    f"ORDER BY last_modified_time DESC LIMIT ?",
+                    (q_param, q_param, q_param, limit * 2)
+                )
+            else:
+                c.execute(
+                    f"SELECT conversation_id, title, preview, step_count, last_modified_time, status "
+                    f"FROM conversation_summaries "
+                    f"WHERE step_count > 0 "
+                    f"ORDER BY last_modified_time DESC LIMIT ?",
+                    (limit * 2,)
+                )
+            rows = c.fetchall()
+            conn.close()
+
+            for r in rows:
+                cid = r[0]
+                if cid in seen_cids:
+                    continue
+                seen_cids.add(cid)
+
+                is_arch = bool((cid in archived_ids) or (r[5] == "archived"))
+                if is_arch != archived:
+                    continue
+
+                convs.append({
+                    "conversation_id": cid,
+                    "title": r[1] or r[2] or cid[:12],
+                    "preview": r[2],
+                    "step_count": r[3],
+                    "last_modified_time": r[4]
+                })
+                if len(convs) >= limit:
+                    break
+        except Exception as e:
+            print(f"[WARN] Error reading conversation_summaries.db: {e}")
+
+    return {"conversations": convs[:limit]}
 
 
 @app.post("/api/conversations/{conv_id}/rename")
 async def rename_conversation(conv_id: str, body: dict = None):
-    """Update title in conversation_summaries.db."""
+    """Update title in conversation_summaries.db and active proxy sessions."""
     body = body or {}
     title = (body.get("title") or body.get("name") or "").strip()
     if not title:
         return JSONResponse({"error": "title required"}, status_code=400)
+
+    # 1. Update in active proxy sessions and sessions_data
+    for sid, s in list(sessions.items()):
+        if sid == conv_id or s.conv_id == conv_id:
+            s.name = title
+            s.save_to_disk()
+
+    # 2. Update in SQLite DB if present
     db_path = Path.home() / ".gemini" / "antigravity-cli" / "conversation_summaries.db"
     if db_path.exists():
         try:
@@ -692,13 +772,26 @@ async def rename_conversation(conv_id: str, body: dict = None):
             conn.commit()
             conn.close()
         except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
+            print(f"[WARN] Failed to update title in sqlite: {e}")
+
     return {"ok": True, "conversation_id": conv_id, "title": title}
 
 
 @app.delete("/api/conversations/{conv_id}")
 async def delete_conversation(conv_id: str):
-    """Delete a conversation from conversation_summaries.db and its files."""
+    """Delete a conversation from conversation_summaries.db, active sessions, and its files."""
+    # 1. Delete from active proxy sessions and sessions_data
+    to_delete = [sid for sid, s in list(sessions.items()) if sid == conv_id or s.conv_id == conv_id]
+    for sid in to_delete:
+        sessions.pop(sid, None)
+        sess_file = SESSIONS_DIR / f"{sid}.json"
+        if sess_file.exists():
+            try:
+                sess_file.unlink()
+            except Exception:
+                pass
+
+    # 2. Delete from SQLite DB
     db_path = Path.home() / ".gemini" / "antigravity-cli" / "conversation_summaries.db"
     if db_path.exists():
         try:
@@ -710,6 +803,7 @@ async def delete_conversation(conv_id: str):
             conn.close()
         except Exception:
             pass
+
     # Clean up conversation db and brain folder if present
     conv_db = Path.home() / ".gemini" / "antigravity-cli" / "conversations" / f"{conv_id}.db"
     if conv_db.exists():
@@ -806,10 +900,20 @@ def load_transcript_messages(conv_id: str) -> list[dict]:
 @app.post("/api/conversations/{conv_id}/open")
 async def open_conversation(conv_id: str):
     """Open a past AGY conversation into its own dedicated active session."""
-    # Check if an active session already exists for this conv_id
+    # Check if an active session already exists for this session_id or conv_id
+    if conv_id in sessions:
+        return sessions[conv_id].to_dict()
     for s in sessions.values():
         if s.conv_id == conv_id:
             return s.to_dict()
+
+    # Check if session exists on disk
+    sess_file = SESSIONS_DIR / f"{conv_id}.json"
+    if sess_file.exists():
+        sess = AgySession.load_from_disk(sess_file)
+        if sess:
+            sessions[sess.session_id] = sess
+            return sess.to_dict()
 
     # Fetch conversation title
     title = conv_id[:12]
