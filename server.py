@@ -7,12 +7,17 @@ instead of fragile PTY scraping.
 """
 
 import asyncio
+import atexit
 import json
+import logging
 import mimetypes
 import os
 import secrets
+import signal
 import subprocess
+import sys
 import time
+import traceback
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +28,59 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+
+# ---------------------------------------------------------------------------
+# Logging & Diagnostics Setup
+# ---------------------------------------------------------------------------
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%SZ",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("agy-relay")
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def log_unhandled_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    err_tb = "".join(traceback.format_tb(exc_traceback))
+    logger.critical(f"FATAL UNHANDLED EXCEPTION: {exc_type.__name__}: {exc_value}\n{err_tb}")
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+sys.excepthook = log_unhandled_exception
+
+def on_process_exit():
+    logger.info(f"[SHUTDOWN] AGY Relay process PID {os.getpid()} terminating at {now_iso()}")
+    sys.stdout.flush()
+
+atexit.register(on_process_exit)
+
+def handle_os_signal(sig, frame):
+    try:
+        signame = signal.Signals(sig).name
+    except Exception:
+        signame = str(sig)
+    logger.warning(f"[SIGNAL] Received OS signal {signame} ({sig}) on PID {os.getpid()}. Reason: external termination / shutdown.")
+    sys.stdout.flush()
+    # Save active sessions before process exit
+    for sid, s in list(sessions.items()):
+        try:
+            s.save_to_disk()
+        except Exception as e:
+            logger.error(f"Error saving session {sid} on signal {sig}: {e}")
+    sys.exit(128 + sig)
+
+for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+    try:
+        signal.signal(sig, handle_os_signal)
+    except Exception as e:
+        logger.debug(f"Could not bind signal {sig}: {e}")
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -67,13 +125,13 @@ def save_archived_id(conv_id: str, archived: bool):
             current.discard(conv_id)
         ARCHIVE_STORE.write_text(json.dumps(list(current), indent=2), encoding="utf-8")
     except Exception as e:
-        print(f"[ERROR] Failed to save archive store: {e}")
+        logger.error(f"Failed to save archive store: {e}")
 
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AGY Relay", version="v202608.0029")
+app = FastAPI(title="AGY Relay", version="v202608.0030")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -85,8 +143,30 @@ app.add_middleware(
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
 
-def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+@app.on_event("startup")
+async def startup_event():
+    logger.info(f"[STARTUP] AGY Relay started (PID: {os.getpid()}) bound to http://{HOST}:{PORT}")
+    logger.info(f"[STARTUP] Workspace: {WORKSPACE} | AGY binary: {AGY_BIN}")
+    loop = asyncio.get_running_loop()
+    def async_exc_handler(loop, context):
+        msg = context.get("exception", context.get("message"))
+        logger.error(f"[ASYNCIO] Uncaught exception: {msg}")
+        if "exception" in context:
+            exc = context["exception"]
+            logger.error("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+        sys.stdout.flush()
+    loop.set_exception_handler(async_exc_handler)
+    sys.stdout.flush()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.warning(f"[SHUTDOWN] AGY Relay server event triggered on PID {os.getpid()}")
+    for sid, s in list(sessions.items()):
+        try:
+            s.save_to_disk()
+        except Exception as e:
+            logger.error(f"Error saving session {sid} on shutdown: {e}")
+    sys.stdout.flush()
 
 
 # ---------------------------------------------------------------------------
