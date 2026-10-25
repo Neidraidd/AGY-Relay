@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoxUtils — Multi-Resource Facility & Assembly Pipeline Builder</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-base: #0a0d13;
+            --bg-surface: #111722;
+            --bg-card: #16202f;
+            --bg-elevated: #1e2b3e;
+            --bg-hover: #263852;
+            
+            --border-dim: rgba(255, 255, 255, 0.08);
+            --border-bright: rgba(255, 255, 255, 0.18);
+            
+            --accent-primary: #38bdf8;
+            --accent-cyan: #06b6d4;
+            --accent-green: #2ed573;
+            --accent-amber: #f59e0b;
+            --accent-purple: #a855f7;
+            --accent-red: #ef4444;
+            --accent-blue: #54a0ff;
+            
+            /* AssMat Palette */
+            --mat-chassis: #38bdf8; /* Blue/Cyan */
+            --mat-assmat1: #fb923c; /* Orange */
+            --mat-assmat2: #fbbf24; /* Amber / Yellow */
+            --mat-assmat3: #60a5fa; /* Light Blue */
+            --mat-assmat4: #c084fc; /* Purple */
+            --mat-assmat5: #34d399; /* Emerald Green */
+            --mat-steel:   #94a3b8; /* Steel Silver */
+            --mat-pcmat:   #38bdf8; /* Cyan */
+            --mat-fuel:    #f43f5e; /* Rose / Heavy Oil */
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1380px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* --- Header & Preset Bar --- */
+        .header-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-title-wrap h1 {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffffff;
+        }
+
+        .header-title-wrap p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            color: var(--text-main);
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .preset-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-bright);
+        }
+
+        .preset-btn.active {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+        }
+
+        .action-btn-danger {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        .action-btn-danger:hover {
+            background: rgba(239, 68, 68, 0.22);
+            border-color: #ef4444;
+            color: #ffffff;
+        }
+
+        /* --- Operation Context Info Strip --- */
+        .op-info-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-md);
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .op-badges {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .op-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge-priority-high { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-strategy-efficient { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .badge-power { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        /* --- Main Workspace Card --- */
+        .workspace-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .workspace-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-dim);
+            padding-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .workspace-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+        }
+
+        .workspace-header .subtext {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* --- Pipeline Visual Diagram Container --- */
+        .pipeline-container {
+            display: flex;
+            gap: 24px;
+            align-items: stretch;
+            overflow-x: auto;
+            padding: 8px 4px 16px;
+        }
+
+        /* Left Side: Parallel Streams Column */
+        .streams-column {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            flex: 1;
+            min-width: 650px;
+        }
+
+        /* Single Stream Rail (e.g. Chassis, AssMat I, AssMat II, AssMat IV, Heavy Oil) */
+        .stream-rail {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .stream-rail.chassis { border-left: 4px solid var(--mat-chassis); }
+        .stream-rail.assmat1 { border-left: 4px solid var(--mat-assmat1); }
+        .stream-rail.assmat2 { border-left: 4px solid var(--mat-assmat2); }
+        .stream-rail.assmat3 { border-left: 4px solid var(--mat-assmat3); }
+        .stream-rail.assmat4 { border-left: 4px solid var(--mat-assmat4); }
+        .stream-rail.assmat5 { border-left: 4px solid var(--mat-assmat5); }
+        .stream-rail.steel   { border-left: 4px solid var(--mat-steel); }
+        .stream-rail.pcmat   { border-left: 4px solid var(--mat-pcmat); }
+        .stream-rail.fuel    { border-left: 4px solid var(--mat-fuel); }
+
+        .stream-rail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stream-rail-title {
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stream-rail.chassis .stream-rail-title { color: var(--mat-chassis); }
+        .stream-rail.assmat1 .stream-rail-title { color: var(--mat-assmat1); }
+        .stream-rail.assmat2 .stream-rail-title { color: var(--mat-assmat2); }
+        .stream-rail.assmat3 .stream-rail-title { color: var(--mat-assmat3); }
+        .stream-rail.assmat4 .stream-rail-title { color: var(--mat-assmat4); }
+        .stream-rail.assmat5 .stream-rail-title { color: var(--mat-assmat5); }
+        .stream-rail.steel   .stream-rail-title { color: var(--mat-steel); }
+        .stream-rail.pcmat   .stream-rail-title { color: var(--mat-pcmat); }
+        .stream-rail.fuel    .stream-rail-title { color: var(--mat-fuel); }
+
+        .stream-rail-steps-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 6px;
+        }
+
+        /* --- Step Tile Component --- */
+        .step-tile {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            min-width: 180px;
+            max-width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .step-tile:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .step-tile-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        .step-tile-type {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .step-tile.gather .step-tile-type { color: #38bdf8; }
+        .step-tile.refine .step-tile-type { color: #c084fc; }
+        .step-tile.facility .step-tile-type { color: #fbbf24; }
+        .step-tile.ship .step-tile-type { color: #38bdf8; }
+        .step-tile.pallet .step-tile-type { color: #a3e635; }
+        .step-tile.pipe .step-tile-type { color: #f43f5e; }
+        .step-tile.train .step-tile-type { color: #f43f5e; }
+        .step-tile.staging .step-tile-type { color: #34d399; }
+
+        .step-tile-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tile-action-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-muted);
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .tile-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .tile-action-btn.edit-btn:hover {
+            background: rgba(56, 189, 248, 0.25);
+            color: #38bdf8;
+            border-color: #38bdf8;
+        }
+
+        .tile-action-btn.del-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            color: #f87171;
+            border-color: #ef4444;
+        }
+
+        .step-tile-loc {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+
+        .step-tile-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+        }
+
+        .step-tag-pill {
+            font-size: 9.5px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+        }
+
+        .step-tag-pill.pinned {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+
+        .step-tag-pill.auto {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+        }
+
+        /* --- Inter-Step Connector & Add Node --- */
+        .step-connector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 0 4px;
+        }
+
+        .connector-line {
+            width: 20px;
+            height: 2px;
+            background: var(--border-bright);
+        }
+
+        .btn-add-step-inline {
+            background: var(--bg-card);
+            border: 1px dashed var(--border-bright);
+            color: var(--text-dim);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 2;
+        }
+
+        .btn-add-step-inline:hover {
+            background: var(--accent-primary);
+            color: #000000;
+            border-color: var(--accent-primary);
+            transform: scale(1.2);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+        }
+
+        /* --- Right Side: Convergence Hub Column (Assembly Station & Deliver) --- */
+        .hub-column {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 300px;
+            min-width: 280px;
+            position: relative;
+            border-left: 2px dashed rgba(255, 255, 255, 0.12);
+            padding-left: 24px;
+        }
+
+        .hub-column-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hub-tile {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hub-tile:hover {
+            border-color: var(--accent-purple);
+            background: var(--bg-hover);
+            transform: translateY(-2px);
+        }
+
+        .hub-tile.deliver:hover {
+            border-color: var(--accent-green);
+        }
+
+        .hub-tile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .facility-chips-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .facility-chip {
+            background: rgba(168, 85, 247, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #c084fc;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* --- Modals --- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-bright);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 540px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: modalPop 0.2s ease-out;
+        }
+
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-dim);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .form-group input, .form-group select {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            color: #ffffff;
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .step-type-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .step-type-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dim);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .step-type-card:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-bright);
+        }
+
+        .step-type-card.selected {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .step-type-icon {
+            font-size: 16px;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-modal {
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-modal-secondary {
+            background: var(--bg-elevated);
+            color: var(--text-muted);
+            border: 1px solid var(--border-dim);
+        }
+        .btn-modal-secondary:hover { background: var(--bg-hover); color: #ffffff; }
+
+        .btn-modal-primary { background: var(--accent-primary); color: #000000; }
+        .btn-modal-primary:hover { background: #7dd3fc; }
+
+        /* Toast */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            background: var(--bg-surface);
+            border: 1px solid var(--accent-primary);
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideUp 0.2s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header Card -->
+    <div class="header-card">
+        <div class="header-top">
+            <div class="header-title-wrap">
+                <h1><i class="fa-solid fa-industry" style="color: var(--mat-assmat1);"></i> Multi-Resource Facility & Assembly Materials Pipeline</h1>
+                <p>Parallel resource rails with universal <strong>[ ✏️ Edit on All Steps ]</strong> and <strong>[ + Add / 🗑️ Delete Inter-Step Node System ]</strong></p>
+            </div>
+            <div class="header-controls">
+                <button class="preset-btn active" onclick="loadAdvancedPreset('lordscar')"><i class="fa-solid fa-shield-halved" style="color: #fb923c;"></i> Preset A: Lordscar Tank Destroyer</button>
+                <button class="preset-btn" onclick="loadAdvancedPreset('battletank')"><i class="fa-solid fa-skull-crossbones" style="color: #34d399;"></i> Preset B: Lance-36 Battle Tank</button>
+                <button class="preset-btn" onclick="loadAdvancedPreset('submarine')"><i class="fa-solid fa-anchor" style="color: #38bdf8;"></i> Preset C: Nakki Submarine</button>
+                <button class="preset-btn" onclick="loadAdvancedPreset('highwayman')"><i class="fa-solid fa-crosshairs" style="color: #fbbf24;"></i> Preset D: Highwayman Variant</button>
+                <button class="preset-btn action-btn-danger" onclick="resetAllToAuto()"><i class="fa-solid fa-rotate-left"></i> Reset to Auto</button>
+            </div>
+        </div>
+
+        <div class="op-info-bar">
+            <div class="op-badges">
+                <span class="op-badge badge-priority-high"><i class="fa-solid fa-angles-up"></i> Priority: High</span>
+                <span class="op-badge badge-strategy-efficient"><i class="fa-solid fa-scale-balanced"></i> Strategy: Most Efficient</span>
+                <span class="op-badge badge-power" id="op-power-badge"><i class="fa-solid fa-bolt"></i> Power Grid: 18.5 MW / 24.0 MW</span>
+                <span class="op-badge" style="background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3);"><i class="fa-solid fa-oil-well"></i> Piped Heavy Oil: 35L/min</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted);">
+                <i class="fa-solid fa-user-gear text-accent"></i> Staff+ Granular Facility Engine Active
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="workspace-card">
+        <div class="workspace-header">
+            <div>
+                <h2 id="pipeline-title"><i class="fa-solid fa-route" style="color: var(--accent-primary);"></i> Planned Supply Chain Route</h2>
+                <div class="subtext">Parallel multi-ingredient rails converging on Large Assembly Station. Hover between any steps to insert custom transit or staging legs.</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <span style="font-size: 12px; color: var(--text-muted); background: var(--bg-elevated); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border-dim);">
+                    <i class="fa-solid fa-circle-nodes" style="color: var(--accent-primary);"></i> Multi-Rail Facility DAG
+                </span>
+            </div>
+        </div>
+
+        <!-- Dynamic Multi-Rail Container -->
+        <div class="pipeline-container" id="pipeline-container">
+            <!-- Rendered in JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal 1: Edit Step Location & Facility Recipe -->
+<div id="modal-edit-step" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="edit-modal-title"><i class="fa-solid fa-pen text-accent"></i> Edit Route Step</h3>
+            <button class="tile-action-btn" onclick="closeModal('modal-edit-step')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Step Role</label>
+                <input type="text" id="edit-step-role-display" readonly style="opacity: 0.7;">
+            </div>
+
+            <div class="form-group">
+                <label>Location / Facility POI (Zone & Hex)</label>
+                <select id="edit-step-location-select">
+                    <option value="Basin Sionnach Compound — Cuttail Station">Basin Sionnach Compound — Cuttail Station (Main Facility Hub)</option>
+                    <option value="Solas Gorge — Callahan's Passage">Solas Gorge — Callahan's Passage (Oil Refinery / Wells)</option>
+                    <option value="Drowned Vale — Brodytown">Drowned Vale — Brodytown (Coal Coker & Smelter)</option>
+                    <option value="Saltbrook Channel — Endless Shore">Saltbrook Channel — Endless Shore (Naval Dry Dock & Seaport)</option>
+                    <option value="Kirknell Rail Yard — Viper Pit">Kirknell Rail Yard — Viper Pit (Standard Gauge Rail Pad)</option>
+                    <option value="The Wash — Basin Sionnach">The Wash — Basin Sionnach (Target Stockpile)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="edit-step-mode-group">
+                <label>Transport / Production Facility Mode</label>
+                <select id="edit-step-mode-select">
+                    <option value="Material Pallet (Flatbed)">📦 Material Pallet (BMS Flatbed / 120 items)</option>
+                    <option value="Liquid Fuel Tanker">🛢️ Liquid Fuel Tanker (Heavy Oil / Petrol)</option>
+                    <option value="Pipe Network Flow">⚡ Direct Pipe Flow (Pipeline Network)</option>
+                    <option value="Freighter Shipping">⚓ BMS Ironship (Waterway Freight)</option>
+                    <option value="Heavy Rail Train">🚂 Standard Gauge Train Flatcars</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Pinning & Override</label>
+                <div style="display: flex; gap: 10px; margin-top: 4px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #ffffff; cursor: pointer;">
+                        <input type="checkbox" id="edit-step-pinned-chk" checked>
+                        <span>Pin this specific location (Overrides automated facility engine)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-modal-secondary" onclick="closeModal('modal-edit-step')">Cancel</button>
+            <button class="btn-modal btn-modal-primary" onclick="saveEditedStep()"><i class="fa-solid fa-check"></i> Save Step</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Add Inter-Step Node -->
+<div id="modal-add-step" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-plus-circle text-accent"></i> Insert Intermediate Facility / Transit Step</h3>
+            <button class="tile-action-btn" onclick="closeModal('modal-add-step')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Select Step Type to Insert</label>
+                <div class="step-type-grid">
+                    <div class="step-type-card selected" onclick="selectStepType('pallet', this)">
+                        <div class="step-type-icon"><i class="fa-solid fa-pallet" style="color: #fbbf24;"></i></div>
+                        <div>
+                            <div style="font-size: 12px; font-weight: 700;">Material Pallet</div>
+                            <div style="font-size: 10px; color: var(--text-muted);">Flatbed Pallet Haul</div>
+                        </div>
+                    </div>
+                    <div class="step-type-card" onclick="selectStepType('pipe', this)">
+                        <div class="step-type-icon"><i class="fa-solid fa-faucet-drip" style="color: #f43f5e;"></i></div>
+                        <div>
+                            <div style="font-size: 12px; font-weight: 700;">Liquid Pipe Leg</div>
+                            <div style="font-size: 10px; color: var(--text-muted);">Heavy Oil / Petrol Feed</div>
+                        </div>
+                    </div>
+                    <div class="step-type-card" onclick="selectStepType('train', this)">
+                        <div class="step-type-icon"><i class="fa-solid fa-train" style="color: #a855f7;"></i></div>
+                        <div>
+                            <div style="font-size: 12px; font-weight: 700;">Rail Transfer</div>
+                            <div style="font-size: 10px; color: var(--text-muted);">Heavy Rail Car Haul</div>
+                        </div>
+                    </div>
+                    <div class="step-type-card" onclick="selectStepType('staging', this)">
+                        <div class="step-type-icon"><i class="fa-solid fa-warehouse" style="color: #34d399;"></i></div>
+                        <div>
+                            <div style="font-size: 12px; font-weight: 700;">Facility Staging</div>
+                            <div style="font-size: 10px; color: var(--text-muted);">Material Transfer Pad</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Location / Facility POI</label>
+                <select id="add-step-location-select">
+                    <option value="Basin Sionnach Compound">Basin Sionnach Compound (Main Facility Yard)</option>
+                    <option value="Solas Gorge — Callahan's Passage">Solas Gorge — Callahan's Passage (Midline Transfer)</option>
+                    <option value="Drowned Vale — Brodytown">Drowned Vale — Brodytown (Foundry Staging)</option>
+                    <option value="Kirknell — Viper Pit">Kirknell — Viper Pit (Rail Depot)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Custom Notes (Optional)</label>
+                <input type="text" id="add-step-notes" placeholder="e.g. Buffer 60 AssMat I on West Material Transfer Pad">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-modal-secondary" onclick="closeModal('modal-add-step')">Cancel</button>
+            <button class="btn-modal btn-modal-primary" onclick="confirmInsertStep()"><i class="fa-solid fa-plus"></i> Insert Step</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+    const ADVANCED_PRESETS = {
+        lordscar: {
+            title: "Silverhand Mk. IV 'Lordscar' (Tank Destroyer Upgrade)",
+            power: "Power Grid: 16.0 MW / 20.0 MW",
+            streams: [
+                {
+                    matName: "Base Vehicle Chassis",
+                    type: "chassis",
+                    icon: "fa-tank-tank",
+                    subtext: "1x Silverhand Mk. IV (155 Rmats)",
+                    steps: [
+                        { type: "gather", label: "Gather", loc: "Basin Sionnach", sub: "Component Mine", isPinned: false, tag: "Auto" },
+                        { type: "refine", label: "Refine", loc: "Cuttail Station", sub: "Refinery (155 Rmats)", isPinned: false, tag: "Local" },
+                        { type: "facility", label: "Produce Chassis", loc: "Cuttail Garage / MPF", sub: "Silverhand Mk. IV", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Drive to Pad", loc: "Cuttail ➔ Facility Pad", sub: "Direct Drive Haul", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Assembly Materials I (15x)",
+                    type: "assmat1",
+                    icon: "fa-cubes",
+                    subtext: "45x Cmats + 60x Coke",
+                    steps: [
+                        { type: "gather", label: "Gather Scrap", loc: "Basin Sionnach", sub: "Salvage Field", isPinned: false, tag: "Auto" },
+                        { type: "refine", label: "Coal Coker", loc: "Drowned Vale", sub: "Coke Production", isPinned: true, tag: "Pinned" },
+                        { type: "facility", label: "Metalworks Factory", loc: "Basin Facility Compound", sub: "15x AssMat I", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Pallet Haul", loc: "Basin Yard ➔ Pad", sub: "Material Pallet (15)", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Assembly Materials II (10x)",
+                    type: "assmat2",
+                    icon: "fa-cubes",
+                    subtext: "20x Cmats + 30x Coke + 5L Heavy Oil",
+                    steps: [
+                        { type: "gather", label: "Piping Feed", loc: "Solas Gorge", sub: "Heavy Oil Pipeline", isPinned: true, tag: "Pinned" },
+                        { type: "facility", label: "Blast Furnace", loc: "Basin Facility Compound", sub: "10x AssMat II", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Pallet Haul", loc: "Basin Yard ➔ Pad", sub: "Material Pallet (10)", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Assembly Materials IV (5x)",
+                    type: "assmat4",
+                    icon: "fa-cubes-stacked",
+                    subtext: "10x AssMat I + 20x Sulfur + 10L Heavy Oil",
+                    steps: [
+                        { type: "gather", label: "Gather Sulfur", loc: "Callahan's Passage", sub: "Sulfur Mine", isPinned: false, tag: "Auto" },
+                        { type: "facility", label: "Advanced Metalworks", loc: "Basin Facility Compound", sub: "5x AssMat IV", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Pallet Haul", loc: "Basin Yard ➔ Pad", sub: "Material Pallet (5)", isPinned: true, tag: "Pinned" }
+                    ]
+                }
+            ],
+            produce: {
+                title: "Large Assembly Station",
+                location: "Basin Sionnach Compound",
+                sub: "Tank Upgrade Pad (Lordscar Mod)",
+                facilities: ["Large Assembly Station", "Tank Upgrade Pad", "16.0 MW Power"],
+                isPinned: true
+            },
+            deliver: {
+                title: "Deliver & Stockpile",
+                location: "The Wash (Storage Depot) — Basin Sionnach",
+                sub: "Target Depot Armored Reserve",
+                isPinned: true
+            }
+        },
+        battletank: {
+            title: "Lance-36 Battle Tank (SHT / BT Heavy Armor)",
+            power: "Power Grid: 28.5 MW / 32.0 MW",
+            streams: [
+                {
+                    matName: "Processed Construction Materials (100x)",
+                    type: "pcmat",
+                    icon: "fa-cube",
+                    subtext: "Components + Heavy Oil Smelting",
+                    steps: [
+                        { type: "gather", label: "Gather Comps", loc: "Basin Sionnach", sub: "Component Mine", isPinned: false, tag: "Auto" },
+                        { type: "pipe", label: "Oil Piping", loc: "Solas Gorge", sub: "Heavy Oil Pipeline", isPinned: true, tag: "Pinned" },
+                        { type: "facility", label: "Blast Furnace", loc: "Basin Facility Compound", sub: "100x PCMats", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Pallet Haul", loc: "Basin Yard ➔ Pad", sub: "2x Material Pallets", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Steel Construction Materials (25x)",
+                    type: "steel",
+                    icon: "fa-layer-group",
+                    subtext: "Metalworks + Coal + Heavy Oil",
+                    steps: [
+                        { type: "gather", label: "Coal Field", loc: "Drowned Vale", sub: "High-grade Coal", isPinned: false, tag: "Auto" },
+                        { type: "facility", label: "Industrial Forge", loc: "Basin Facility Compound", sub: "25x Steel Mats", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Crane Transfer", loc: "Basin Yard ➔ Pad", sub: "Material Pallet (25)", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Assembly Materials III & IV (55x Total)",
+                    type: "assmat3",
+                    icon: "fa-cubes-stacked",
+                    subtext: "35x AssMat III + 20x AssMat IV",
+                    steps: [
+                        { type: "facility", label: "Advanced Metalworks", loc: "Basin Facility Compound", sub: "35x AssMat III", isPinned: true, tag: "Pinned" },
+                        { type: "facility", label: "Chemical Facility", loc: "Basin Facility Compound", sub: "20x AssMat IV", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Pallet Haul", loc: "Basin Yard ➔ Pad", sub: "Material Pallet", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Piped Heavy Fuel (80L/min)",
+                    type: "fuel",
+                    icon: "fa-oil-well",
+                    subtext: "Continuous Pad Fluid Feed",
+                    steps: [
+                        { type: "gather", label: "Oil Wellhead", loc: "Solas Gorge", sub: "3x Pumpjacks", isPinned: false, tag: "Auto" },
+                        { type: "refine", label: "Oil Cracker", loc: "Solas Gorge", sub: "Heavy Oil Refining", isPinned: true, tag: "Pinned" },
+                        { type: "pipe", label: "Direct Pipeline", loc: "Solas ➔ Basin Compound", sub: "Underground Pipe Link", isPinned: true, tag: "Pinned" }
+                    ]
+                }
+            ],
+            produce: {
+                title: "Large Assembly Station (Battle Tank)",
+                location: "Basin Sionnach Compound",
+                sub: "Battle Tank Assembly Pad",
+                facilities: ["Large Assembly Station", "Battle Tank Pad", "28.5 MW Heavy Turbine"],
+                isPinned: true
+            },
+            deliver: {
+                title: "Deliver & Stockpile",
+                location: "The Wash (Storage Depot) — Basin Sionnach",
+                sub: "Combat Deployment Readiness",
+                isPinned: true
+            }
+        },
+        submarine: {
+            title: "Nakki-Class Submarine (Dry Dock Large Ship)",
+            power: "Power Grid: 36.0 MW / 40.0 MW",
+            streams: [
+                {
+                    matName: "Large Ship Parts (20x)",
+                    type: "chassis",
+                    icon: "fa-anchor",
+                    subtext: "Small Assembly Station Fabricated",
+                    steps: [
+                        { type: "facility", label: "Small Assembly Station", loc: "Saltbrook Naval Yard", sub: "20x Large Ship Parts", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Crane Transfer", loc: "Yard ➔ Dry Dock Cradle", sub: "Gantry Crane Haul", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Steel Construction Materials (120x)",
+                    type: "steel",
+                    icon: "fa-layer-group",
+                    subtext: "Naval Hull Armor Plating",
+                    steps: [
+                        { type: "gather", label: "Component Field", loc: "Endless Shore", sub: "Scraping Mine", isPinned: false, tag: "Auto" },
+                        { type: "facility", label: "Naval Steel Works", loc: "Saltbrook Naval Yard", sub: "120x Steel Mats", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Pallet Rail", loc: "Yard ➔ Dry Dock", sub: "3x Material Pallets", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Assembly Materials IV & V (135x)",
+                    type: "assmat5",
+                    icon: "fa-cubes-stacked",
+                    subtext: "85x AssMat IV + 50x AssMat V (Engines/Periscope)",
+                    steps: [
+                        { type: "facility", label: "Chemical Facility", loc: "Saltbrook Naval Yard", sub: "85x AssMat IV", isPinned: true, tag: "Pinned" },
+                        { type: "facility", label: "Advanced Forge", loc: "Saltbrook Naval Yard", sub: "50x AssMat V", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Pallet Haul", loc: "Yard ➔ Dry Dock", sub: "2x Material Pallets", isPinned: true, tag: "Pinned" }
+                    ]
+                }
+            ],
+            produce: {
+                title: "Saltbrook Dry Dock",
+                location: "Saltbrook Channel — Endless Shore",
+                sub: "Submarine Construction Cradle",
+                facilities: ["Dry Dock", "Gantry Crane", "36.0 MW Turbine Grid"],
+                isPinned: true
+            },
+            deliver: {
+                title: "Launch & Sea Trials",
+                location: "Saltbrook Seaport — Endless Shore",
+                sub: "Active Submarine Flotilla",
+                isPinned: true
+            }
+        },
+        highwayman: {
+            title: "Outlaw Mk. II 'Highwayman' (Assault Tank Variant)",
+            power: "Power Grid: 12.0 MW / 15.0 MW",
+            streams: [
+                {
+                    matName: "Base Outlaw Chassis",
+                    type: "chassis",
+                    icon: "fa-tank-tank",
+                    subtext: "1x Outlaw Cruiser Tank (165 Rmats)",
+                    steps: [
+                        { type: "facility", label: "Garage / MPF", loc: "Cuttail Station", sub: "1x Base Outlaw Chassis", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Drive to Pad", loc: "Cuttail ➔ Facility", sub: "Direct Drive Haul", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Assembly Materials I (10x)",
+                    type: "assmat1",
+                    icon: "fa-cubes",
+                    subtext: "30x Cmats + 40x Coke",
+                    steps: [
+                        { type: "facility", label: "Metalworks Factory", loc: "Basin Facility Compound", sub: "10x AssMat I", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Pallet Haul", loc: "Yard ➔ Pad", sub: "Material Pallet (10)", isPinned: true, tag: "Pinned" }
+                    ]
+                },
+                {
+                    matName: "Assembly Materials II (10x)",
+                    type: "assmat2",
+                    icon: "fa-cubes",
+                    subtext: "20x Cmats + 30x Coke + Heavy Oil",
+                    steps: [
+                        { type: "facility", label: "Blast Furnace", loc: "Basin Facility Compound", sub: "10x AssMat II", isPinned: true, tag: "Pinned" },
+                        { type: "pallet", label: "Pallet Haul", loc: "Yard ➔ Pad", sub: "Material Pallet (10)", isPinned: true, tag: "Pinned" }
+                    ]
+                }
+            ],
+            produce: {
+                title: "Small Assembly Station",
+                location: "Basin Sionnach Compound",
+                sub: "Motor Pool Upgrade Pad",
+                facilities: ["Small Assembly Station", "Motor Pool Pad", "12.0 MW Power"],
+                isPinned: true
+            },
+            deliver: {
+                title: "Deliver & Stockpile",
+                location: "The Wash (Storage Depot) — Basin Sionnach",
+                sub: "Fast Flanker Armored Reserve",
+                isPinned: true
+            }
+        }
+    };
+
+    let currentStreams = [];
+    let produceHub = {};
+    let deliverHub = {};
+    let activeEditContext = null;
+    let activeInsertContext = null;
+    let selectedInsertType = 'pallet';
+
+    function loadAdvancedPreset(key) {
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        if (event && event.currentTarget) event.currentTarget.classList.add('active');
+
+        const p = ADVANCED_PRESETS[key];
+        document.getElementById('pipeline-title').innerHTML = `<i class="fa-solid fa-route" style="color: var(--accent-primary);"></i> Planned Route: ${p.title}`;
+        document.getElementById('op-power-badge').innerHTML = `<i class="fa-solid fa-bolt"></i> ${p.power}`;
+
+        currentStreams = JSON.parse(JSON.stringify(p.streams));
+        produceHub = JSON.parse(JSON.stringify(p.produce));
+        deliverHub = JSON.parse(JSON.stringify(p.deliver));
+
+        renderPipeline();
+        showToast('Loaded ' + p.title);
+    }
+
+    function renderPipeline() {
+        const container = document.getElementById('pipeline-container');
+        if (!container) return;
+
+        let streamsHtml = currentStreams.map((stream, sIdx) => {
+            const stepsHtml = [];
+
+            stream.steps.forEach((step, stepIdx) => {
+                let icon = 'fa-location-dot';
+                if (step.type === 'gather') icon = 'fa-person-digging';
+                else if (step.type === 'refine') icon = 'fa-fire';
+                else if (step.type === 'facility') icon = 'fa-industry';
+                else if (step.type === 'pallet') icon = 'fa-pallet';
+                else if (step.type === 'pipe') icon = 'fa-faucet-drip';
+                else if (step.type === 'ship') icon = 'fa-ship';
+                else if (step.type === 'train') icon = 'fa-train';
+                else if (step.type === 'staging') icon = 'fa-warehouse';
+
+                const canDelete = stream.steps.length > 1;
+
+                stepsHtml.push(`
+                    <div class="step-tile ${step.type}" onclick="openEditStepModal('stream', ${sIdx}, ${stepIdx})">
+                        <div class="step-tile-head">
+                            <div class="step-tile-type"><i class="fa-solid ${icon}"></i> ${step.label}</div>
+                            <div class="step-tile-actions" onclick="event.stopPropagation()">
+                                <button type="button" class="tile-action-btn edit-btn" onclick="openEditStepModal('stream', ${sIdx}, ${stepIdx})" title="Edit Step Location & Facility Details">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                ${canDelete ? `
+                                    <button type="button" class="tile-action-btn del-btn" onclick="deleteStep(${sIdx}, ${stepIdx})" title="Delete This Step">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="step-tile-loc">${step.loc}</div>
+                        <div class="step-tile-sub">
+                            <span>${step.sub}</span>
+                            <span class="step-tag-pill ${step.isPinned ? 'pinned' : 'auto'}">${step.tag || (step.isPinned ? 'Pinned' : 'Auto')}</span>
+                        </div>
+                    </div>
+                `);
+
+                // Insert Add Node connector between steps (and at end before convergence)
+                if (stepIdx < stream.steps.length - 1) {
+                    stepsHtml.push(`
+                        <div class="step-connector">
+                            <div class="connector-line"></div>
+                            <button type="button" class="btn-add-step-inline" onclick="openAddStepModal(${sIdx}, ${stepIdx})" title="Insert step between ${step.label} and ${stream.steps[stepIdx+1].label}">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                            <div class="connector-line"></div>
+                        </div>
+                    `);
+                } else {
+                    stepsHtml.push(`
+                        <div class="step-connector">
+                            <div class="connector-line"></div>
+                            <button type="button" class="btn-add-step-inline" onclick="openAddStepModal(${sIdx}, ${stepIdx})" title="Add step before Assembly Station convergence">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                            <div class="connector-line"></div>
+                        </div>
+                    `);
+                }
+            });
+
+            return `
+                <div class="stream-rail ${stream.type}">
+                    <div class="stream-rail-header">
+                        <div class="stream-rail-title"><i class="fa-solid ${stream.icon}"></i> ${stream.matName}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">${stream.subtext} · ${stream.steps.length} steps</div>
+                    </div>
+                    <div class="stream-rail-steps-row">
+                        ${stepsHtml.join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Hub HTML
+        const produceFacilitiesHtml = produceHub.facilities ? produceHub.facilities.map(f => `<span class="facility-chip"><i class="fa-solid fa-industry"></i> ${f}</span>`).join('') : '';
+
+        const hubHtml = `
+            <div class="hub-column">
+                <div class="hub-column-title"><i class="fa-solid fa-code-merge"></i> Convergence Hub</div>
+                
+                <!-- Assembly Station Hub Step Tile -->
+                <div class="hub-tile" onclick="openEditStepModal('produce')">
+                    <div class="hub-tile-header">
+                        <div class="step-tile-type" style="color: var(--accent-purple);"><i class="fa-solid fa-industry"></i> ${produceHub.title}</div>
+                        <div class="step-tile-actions" onclick="event.stopPropagation()">
+                            <button type="button" class="tile-action-btn edit-btn" onclick="openEditStepModal('produce')" title="Edit Assembly Station Location">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="step-tile-loc">${produceHub.location}</div>
+                    <div class="step-tile-sub">${produceHub.sub}</div>
+                    <div class="facility-chips-row">${produceFacilitiesHtml}</div>
+                </div>
+
+                <!-- Deliver Hub Step Tile -->
+                <div class="hub-tile deliver" onclick="openEditStepModal('deliver')">
+                    <div class="hub-tile-header">
+                        <div class="step-tile-type" style="color: var(--accent-green);"><i class="fa-solid fa-flag-checkered"></i> ${deliverHub.title}</div>
+                        <div class="step-tile-actions" onclick="event.stopPropagation()">
+                            <button type="button" class="tile-action-btn edit-btn" onclick="openEditStepModal('deliver')" title="Edit Final Destination Stockpile">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="step-tile-loc">${deliverHub.location}</div>
+                    <div class="step-tile-sub">${deliverHub.sub}</div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = `
+            <div class="streams-column">${streamsHtml}</div>
+            ${hubHtml}
+        `;
+    }
+
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    function openEditStepModal(type, sIdx, stepIdx) {
+        activeEditContext = { type, sIdx, stepIdx };
+        const modal = document.getElementById('modal-edit-step');
+        const titleEl = document.getElementById('edit-modal-title');
+        const roleInput = document.getElementById('edit-step-role-display');
+        const locSelect = document.getElementById('edit-step-location-select');
+        const modeGroup = document.getElementById('edit-step-mode-group');
+
+        let currentLoc = '';
+        let roleName = '';
+
+        if (type === 'stream') {
+            const step = currentStreams[sIdx].steps[stepIdx];
+            roleName = `${currentStreams[sIdx].matName} — ${step.label}`;
+            currentLoc = step.loc;
+            modeGroup.style.display = (step.type === 'pallet' || step.type === 'pipe' || step.type === 'ship' || step.type === 'train') ? 'block' : 'none';
+        } else if (type === 'produce') {
+            roleName = 'Large Assembly Station / Upgrade Pad';
+            currentLoc = produceHub.location;
+            modeGroup.style.display = 'none';
+        } else if (type === 'deliver') {
+            roleName = 'Destination Deployment Stockpile';
+            currentLoc = deliverHub.location;
+            modeGroup.style.display = 'none';
+        }
+
+        titleEl.innerHTML = `<i class="fa-solid fa-pen" style="color: var(--accent-primary);"></i> Edit Step: ${roleName}`;
+        roleInput.value = roleName;
+
+        Array.from(locSelect.options).forEach(opt => {
+            opt.selected = opt.value.includes(currentLoc) || currentLoc.includes(opt.value.split(' (')[0]);
+        });
+
+        openModal('modal-edit-step');
+    }
+
+    function saveEditedStep() {
+        if (!activeEditContext) return;
+        const locVal = document.getElementById('edit-step-location-select').value;
+        const isPinned = document.getElementById('edit-step-pinned-chk').checked;
+
+        if (activeEditContext.type === 'stream') {
+            const step = currentStreams[activeEditContext.sIdx].steps[activeEditContext.stepIdx];
+            step.loc = locVal.split(' (')[0];
+            step.isPinned = isPinned;
+            step.tag = isPinned ? 'Pinned' : 'Auto';
+        } else if (activeEditContext.type === 'produce') {
+            produceHub.location = locVal.split(' (')[0];
+            produceHub.isPinned = isPinned;
+        } else if (activeEditContext.type === 'deliver') {
+            deliverHub.location = locVal.split(' (')[0];
+            deliverHub.isPinned = isPinned;
+        }
+
+        closeModal('modal-edit-step');
+        renderPipeline();
+        showToast('Step updated and multi-resource pipeline re-routed');
+    }
+
+    function openAddStepModal(sIdx, insertAfterIdx) {
+        activeInsertContext = { sIdx, insertAfterIdx };
+        openModal('modal-add-step');
+    }
+
+    function selectStepType(type, card) {
+        selectedInsertType = type;
+        document.querySelectorAll('.step-type-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+    }
+
+    function confirmInsertStep() {
+        if (!activeInsertContext) return;
+        const loc = document.getElementById('add-step-location-select').value;
+        const notes = document.getElementById('add-step-notes').value;
+
+        let label = 'Transport';
+        let sub = notes || 'Intermediate Leg';
+
+        if (selectedInsertType === 'pallet') { label = 'Material Pallet'; sub = 'Flatbed Pallet Haul'; }
+        else if (selectedInsertType === 'pipe') { label = 'Pipe Flow'; sub = 'Heavy Oil Pipeline'; }
+        else if (selectedInsertType === 'train') { label = 'Rail Transfer'; sub = 'Heavy Rail Flatcar'; }
+        else if (selectedInsertType === 'staging') { label = 'Facility Staging'; sub = 'Transfer Pad Buffer'; }
+
+        const newStep = {
+            type: selectedInsertType,
+            label,
+            loc: loc.split(' (')[0],
+            sub,
+            isPinned: true,
+            tag: 'Custom'
+        };
+
+        currentStreams[activeInsertContext.sIdx].steps.splice(activeInsertContext.insertAfterIdx + 1, 0, newStep);
+        closeModal('modal-add-step');
+        renderPipeline();
+        showToast(`Inserted "${label}" into pipeline`);
+    }
+
+    function deleteStep(sIdx, stepIdx) {
+        const step = currentStreams[sIdx].steps[stepIdx];
+        if (confirm(`Remove the "${step.label} (${step.loc})" step from this material rail?`)) {
+            currentStreams[sIdx].steps.splice(stepIdx, 1);
+            renderPipeline();
+            showToast(`Deleted ${step.label} step`);
+        }
+    }
+
+    function resetAllToAuto() {
+        currentStreams.forEach(stream => {
+            stream.steps.forEach(step => {
+                step.isPinned = false;
+                step.tag = 'Auto';
+            });
+        });
+        produceHub.isPinned = false;
+        renderPipeline();
+        showToast('All pipeline steps reset to Auto Routing');
+    }
+
+    function showToast(msg) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color: var(--accent-primary);"></i> ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Initial load
+    loadAdvancedPreset('lordscar');
+</script>
+
+</body>
+</html>

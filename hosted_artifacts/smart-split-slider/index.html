@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Eurof — Smart 70/20/10 Split Slider & Intelligent Bill Commitments</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090e;
+      --surface: #0f141f;
+      --card: #151c2a;
+      --card-raised: #1c2537;
+      --card-hover: #222d42;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hi: rgba(255, 255, 255, 0.16);
+      --accent: #bef264; /* lime */
+      --accent-soft: rgba(190, 242, 100, 0.14);
+      --warning: #fbbf24; /* amber */
+      --warning-soft: rgba(251, 191, 36, 0.16);
+      --sky: #38bdf8; /* stashes */
+      --sky-soft: rgba(56, 189, 248, 0.15);
+      --invest: #c084fc; /* purple */
+      --invest-soft: rgba(192, 132, 252, 0.15);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --faint: #64748b;
+      --danger: #f87171;
+      --danger-soft: rgba(248, 113, 113, 0.15);
+      --success: #34d399;
+      --success-soft: rgba(52, 211, 153, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 14px 40px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Top App Header */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 6px;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-badge {
+      background: var(--accent);
+      color: #000;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 3px 8px;
+      border-radius: 999px;
+      letter-spacing: -0.3px;
+    }
+
+    .header-tag {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .reset-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .reset-btn:hover { color: var(--text); border-color: var(--border-hi); }
+
+    /* Hero Input Panel - Interactive Submenu Triggers */
+    .hero-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .hero-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4px;
+    }
+
+    .hero-title-tag {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-helper {
+      font-size: 11px;
+      color: var(--faint);
+    }
+
+    .income-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .interactive-tile {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+
+    .interactive-tile:hover {
+      background: var(--card-hover);
+      border-color: var(--border-hi);
+      transform: translateY(-1px);
+    }
+
+    .interactive-tile:active {
+      transform: scale(0.98);
+    }
+
+    .interactive-tile.highlight {
+      border-color: rgba(251, 191, 36, 0.4);
+      background: rgba(251, 191, 36, 0.05);
+    }
+
+    .tile-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tile-label {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .tile-action-chip {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .interactive-tile:hover .tile-action-chip {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .interactive-tile.highlight:hover .tile-action-chip {
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .tile-amt {
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tile-subtext {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tile-subtext .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--success);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .tile-subtext .dot.amber {
+      background: var(--warning);
+    }
+
+    /* Soft Block Alert Pill */
+    .soft-block-banner {
+      background: rgba(251, 191, 36, 0.12);
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      border-radius: 12px;
+      padding: 9px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fef08a;
+      transition: all 0.2s ease;
+    }
+
+    .soft-block-banner.hidden {
+      display: none;
+    }
+
+    /* Interactive Multi-Segment Slider Track */
+    .slider-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .slider-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slider-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ratio-badge {
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* The Slider Track */
+    .track-container {
+      position: relative;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      touch-action: none;
+    }
+
+    .track-bar {
+      width: 100%;
+      height: 28px;
+      border-radius: 14px;
+      display: flex;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .seg {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 800;
+      color: #fff;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: width 0.05s linear;
+    }
+
+    .seg-bills {
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(251, 191, 36, 0.25),
+        rgba(251, 191, 36, 0.25) 6px,
+        rgba(251, 191, 36, 0.45) 6px,
+        rgba(251, 191, 36, 0.45) 12px
+      );
+      border-right: 2px solid var(--warning);
+      color: var(--warning);
+    }
+
+    .seg-spend {
+      background: rgba(190, 242, 100, 0.35);
+      color: var(--accent);
+    }
+
+    .seg-save {
+      background: rgba(56, 189, 248, 0.35);
+      color: var(--sky);
+    }
+
+    .seg-invest {
+      background: rgba(192, 132, 252, 0.35);
+      color: var(--invest);
+    }
+
+    /* Draggable Thumbs */
+    .thumb {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 26px;
+      height: 38px;
+      border-radius: 10px;
+      background: #ffffff;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: ew-resize;
+      z-index: 10;
+      border: 2px solid #000;
+      touch-action: none;
+    }
+
+    .thumb:active {
+      transform: translate(-50%, -50%) scale(1.1);
+      background: var(--accent);
+    }
+
+    .thumb-grip {
+      width: 2px;
+      height: 14px;
+      background: #64748b;
+      border-radius: 1px;
+    }
+
+    .floor-marker {
+      position: absolute;
+      top: -4px;
+      bottom: -4px;
+      width: 2px;
+      background: var(--warning);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .floor-marker::after {
+      content: '🔒 Floor';
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      font-weight: 800;
+      color: var(--warning);
+      white-space: nowrap;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+
+    /* Presets Row */
+    .presets-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .presets-row::-webkit-scrollbar { display: none; }
+
+    .preset-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .preset-chip:hover {
+      border-color: var(--border-hi);
+      color: var(--text);
+    }
+
+    .preset-chip.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+      font-weight: 900;
+    }
+
+    /* Breakdown Output Cards */
+    .breakdown-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bucket-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.15s ease;
+    }
+
+    .bucket-card.spend { border-left: 4px solid var(--accent); }
+    .bucket-card.save { border-left: 4px solid var(--sky); }
+    .bucket-card.invest { border-left: 4px solid var(--invest); }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bucket-label-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bucket-icon {
+      font-size: 16px;
+    }
+
+    .bucket-name {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+    }
+
+    .bucket-pct-chip {
+      font-size: 11px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .spend .bucket-pct-chip { background: var(--accent-soft); color: var(--accent); }
+    .save .bucket-pct-chip { background: var(--sky-soft); color: var(--sky); }
+    .invest .bucket-pct-chip { background: var(--invest-soft); color: var(--invest); }
+
+    .bucket-amt {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+    }
+
+    .spend-subrows {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .subrow-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .subrow-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .subrow-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .subrow-val.warning { color: var(--warning); }
+    .subrow-val.accent { color: var(--accent); }
+
+    .daily-spend-pill {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 3px 8px;
+      border-radius: 999px;
+      align-self: flex-start;
+    }
+
+    .save-subtext {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ==========================================================================
+       SUBMENU BOTTOM SHEETS / MODALS
+       ========================================================================== */
+    .sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .sheet-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .sheet-content {
+      background: #111726;
+      border: 1px solid var(--border-hi);
+      border-bottom: none;
+      border-radius: 28px 28px 0 0;
+      width: 100%;
+      max-width: 480px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.8);
+      transform: translateY(100%);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+
+    .sheet-overlay.active .sheet-content {
+      transform: translateY(0);
+    }
+
+    .sheet-handle-bar {
+      width: 40px;
+      height: 4px;
+      background: var(--faint);
+      border-radius: 2px;
+      align-self: center;
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
+
+    .sheet-header {
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sheet-header-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sheet-close-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 28px;
+      height: 28px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .sheet-close-btn:hover { color: var(--text); border-color: var(--border-hi); }
+
+    .sheet-body {
+      padding: 16px 18px 28px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sheet-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    /* Income Submenu Elements */
+    .incomes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .income-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .income-item:hover {
+      background: var(--card-hover);
+      border-color: var(--border-hi);
+    }
+
+    .income-item.selected {
+      border-color: var(--accent);
+      background: rgba(190, 242, 100, 0.08);
+    }
+
+    .income-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .income-item-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .income-item-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .income-item-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .income-item-sub {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .income-badge {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .income-badge.primary { background: var(--accent-soft); color: var(--accent); }
+    .income-badge.side { background: var(--sky-soft); color: var(--sky); }
+    .income-badge.past { background: rgba(255, 255, 255, 0.08); color: var(--muted); }
+
+    .income-item-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .income-item-amt {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .radio-circle {
+      width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      border: 2px solid var(--faint);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .income-item.selected .radio-circle {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+    .income-item.selected .radio-circle::after {
+      content: '✓';
+      font-size: 11px;
+      color: #000;
+      font-weight: 900;
+    }
+
+    .custom-income-box {
+      background: var(--surface);
+      border: 1px dashed var(--border-hi);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .custom-income-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .custom-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .custom-num-input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 800;
+      padding: 10px 14px;
+      width: 100%;
+      outline: none;
+    }
+    .custom-num-input:focus { border-color: var(--accent); }
+
+    .apply-btn {
+      background: var(--accent);
+      border: none;
+      color: #000;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 10px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s ease;
+    }
+    .apply-btn:hover { opacity: 0.9; }
+
+    /* Bills Submenu Elements */
+    .bills-summary-strip {
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bills-summary-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .bills-summary-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--warning);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .bills-summary-amt {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .bills-summary-pct {
+      background: var(--warning);
+      color: #000;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .smart-detection-note {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .smart-detection-note .icon {
+      font-size: 16px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .bills-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bill-row {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .bill-row.excluded {
+      opacity: 0.55;
+      background: rgba(255, 255, 255, 0.02);
+      border-style: dashed;
+    }
+
+    .bill-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bill-info-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bill-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .bill-name-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .bill-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .bill-status-pill {
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .bill-status-pill.verified { color: var(--success); }
+    .bill-status-pill.checking { color: var(--warning); }
+    .bill-status-pill.oneoff { color: var(--danger); }
+
+    .bill-right-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bill-money-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .bill-effective-monthly {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .bill-raw-cost {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: rgba(255, 255, 255, 0.15);
+      transition: .2s;
+      border-radius: 24px;
+    }
+
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-toggle {
+      background-color: var(--accent);
+    }
+
+    input:checked + .slider-toggle:before {
+      transform: translateX(18px);
+      background-color: #000;
+    }
+
+    /* Cadence Switcher Chips */
+    .cadence-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .cadence-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--faint);
+      padding: 0 6px;
+      text-transform: uppercase;
+    }
+
+    .cadence-chip {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .cadence-chip:hover { color: var(--text); }
+
+    .cadence-chip.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .add-custom-bill-btn {
+      background: var(--card);
+      border: 1px dashed var(--border-hi);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 12px;
+      border-radius: 14px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .add-custom-bill-btn:hover { background: var(--card-hover); }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- App Header -->
+    <header class="app-header">
+      <div class="logo-row">
+        <span class="logo-badge">EUROF</span>
+        <span class="header-tag">Smart Spending Split</span>
+      </div>
+      <div class="header-actions">
+        <button class="reset-btn" id="resetBtn">↺ Default 70/20/10</button>
+      </div>
+    </header>
+
+    <!-- Hero Card: Income & Fixed Bills Submenu Triggers -->
+    <div class="hero-card">
+      <div class="hero-title-row">
+        <span class="hero-title-tag">💡 Baseline Financial Profile</span>
+        <span class="hero-helper">Tap either tile to adjust</span>
+      </div>
+
+      <div class="income-grid">
+        <!-- Interactive Income Tile -->
+        <div class="interactive-tile" id="openIncomeModalBtn">
+          <div class="tile-top-row">
+            <span class="tile-label">MONTHLY TAKE-HOME</span>
+            <span class="tile-action-chip">Change ✎</span>
+          </div>
+          <div class="tile-amt" id="heroIncomeAmt">£3,200.00</div>
+          <div class="tile-subtext" id="heroIncomeSubtext">
+            <span class="dot"></span> Acme Corp (Salary)
+          </div>
+        </div>
+
+        <!-- Interactive Bills Commitment Tile -->
+        <div class="interactive-tile highlight" id="openBillsModalBtn">
+          <div class="tile-top-row">
+            <span class="tile-label">BILLS COMMITMENT</span>
+            <span class="tile-action-chip">Review ⚙</span>
+          </div>
+          <div class="tile-amt" id="heroBillsAmt">£1,450.00</div>
+          <div class="tile-subtext" id="heroBillsSubtext">
+            <span class="dot amber"></span> <span id="heroFloorPct">45</span>% floor • 8 bills
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Soft-Block Alert Pill -->
+    <div class="soft-block-banner hidden" id="softBlockBanner">
+      <span>🔒</span>
+      <span><strong>Soft-blocked at £<span id="blockedBillsAmt">1,450</span> (<span id="blockedBillsPct">45</span>%)</strong> to protect essential bills commitments. Release snaps back to floor.</span>
+    </div>
+
+    <!-- Interactive Multi-Segment Slider -->
+    <div class="slider-section">
+      <div class="slider-title-row">
+        <span class="slider-title">🎯 Adjust Spending & Saving Ratio</span>
+        <span class="ratio-badge" id="ratioBadge">70 / 20 / 10</span>
+      </div>
+
+      <!-- Multi-Segment Track -->
+      <div class="track-container" id="trackContainer">
+        <!-- Absolute floor indicator line -->
+        <div class="floor-marker" id="floorMarker"></div>
+
+        <div class="track-bar" id="trackBar">
+          <!-- Segment 1: Locked Bills Floor -->
+          <div class="seg seg-bills" id="segBills" style="width: 45%;">
+            ⚡ Bills <span id="segBillsPct">45%</span>
+          </div>
+          <!-- Segment 2: Discretionary Spend Allowance -->
+          <div class="seg seg-spend" id="segSpend" style="width: 25%;">
+            🛍️ Free <span id="segFreePct">25%</span>
+          </div>
+          <!-- Segment 3: Savings & Stashes -->
+          <div class="seg seg-save" id="segSave" style="width: 20%;">
+            💎 Save <span id="segSavePct">20%</span>
+          </div>
+          <!-- Segment 4: Invest & Wealth -->
+          <div class="seg seg-invest" id="segInvest" style="width: 10%;">
+            📈 <span id="segInvestPct">10%</span>
+          </div>
+        </div>
+
+        <!-- Thumb 1: Living/Spend Divider (Draggable) -->
+        <div class="thumb" id="thumbSpend" style="left: 70%;">
+          <div class="thumb-grip"></div>
+        </div>
+
+        <!-- Thumb 2: Save/Invest Divider (Draggable) -->
+        <div class="thumb" id="thumbSave" style="left: 90%;">
+          <div class="thumb-grip"></div>
+        </div>
+      </div>
+
+      <!-- Presets -->
+      <div class="presets-row">
+        <div class="preset-chip active" onclick="applyPreset(70, 20, 10)">70/20/10 Balanced</div>
+        <div class="preset-chip" onclick="applyPreset(60, 20, 20)">60/20/20 High Saver</div>
+        <div class="preset-chip" onclick="applyPreset(75, 15, 10)">75/15/10 Practical</div>
+        <div class="preset-chip" onclick="applyPreset(80, 15, 5)">80/15/5 Conservative</div>
+      </div>
+    </div>
+
+    <!-- Live Dynamic Breakdown Cards -->
+    <div class="breakdown-grid">
+      <!-- 1. Living & Bills -->
+      <div class="bucket-card spend">
+        <div class="card-head">
+          <div class="bucket-label-row">
+            <span class="bucket-icon">🛍️</span>
+            <span class="bucket-name">Living & Fixed Bills</span>
+            <span class="bucket-pct-chip" id="spendPctBadge">70%</span>
+          </div>
+          <div class="bucket-amt" id="spendTotalAmt">£2,240.00</div>
+        </div>
+        <div class="spend-subrows">
+          <div class="subrow-item">
+            <span class="subrow-label">⚡ Fixed Bills Commitment</span>
+            <span class="subrow-val warning" id="cardBillsSubAmt">£1,450.00 (45%)</span>
+          </div>
+          <div class="subrow-item">
+            <span class="subrow-label">🛍️ Discretionary Spend</span>
+            <span class="subrow-val accent" id="cardFreeSubAmt">£790.00 (25%)</span>
+          </div>
+        </div>
+        <div class="daily-spend-pill" id="dailySpendAllowance">£25.48 / day free spend</div>
+      </div>
+
+      <!-- 2. Savings & Stashes -->
+      <div class="bucket-card save">
+        <div class="card-head">
+          <div class="bucket-label-row">
+            <span class="bucket-icon">💎</span>
+            <span class="bucket-name">Savings & Stashes</span>
+            <span class="bucket-pct-chip" id="savePctBadge">20%</span>
+          </div>
+          <div class="bucket-amt" id="saveTotalAmt">£640.00</div>
+        </div>
+        <div class="save-subtext" id="saveDailyRate">~£20.65 / day allocated to stashes</div>
+      </div>
+
+      <!-- 3. Invest & Debt Paydown -->
+      <div class="bucket-card invest">
+        <div class="card-head">
+          <div class="bucket-label-row">
+            <span class="bucket-icon">📈</span>
+            <span class="bucket-name">Invest & Debt Paydown</span>
+            <span class="bucket-pct-chip" id="investPctBadge">10%</span>
+          </div>
+          <div class="bucket-amt" id="investTotalAmt">£320.00</div>
+        </div>
+        <div class="save-subtext">Compounding long-term reserves or paying expensive debt</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       INCOME SELECTION SUBMENU MODAL
+       ======================================================================== -->
+  <div class="sheet-overlay" id="incomeModal">
+    <div class="sheet-content">
+      <div class="sheet-handle-bar"></div>
+      <div class="sheet-header">
+        <div class="sheet-header-title">💼 Select Monthly Income</div>
+        <button class="sheet-close-btn" id="closeIncomeModalBtn">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="sheet-desc">
+          Choose the primary take-home salary or credit used to calculate your monthly budget, allowances, and bills floor.
+        </div>
+
+        <div class="incomes-list" id="incomesListContainer">
+          <!-- Dynamically populated from JS -->
+        </div>
+
+        <!-- Custom Income Entry Option -->
+        <div class="custom-income-box">
+          <span class="custom-income-title">✍️ Or Enter Custom Take-Home Pay</span>
+          <div class="custom-input-row">
+            <span style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--muted)">£</span>
+            <input type="number" id="customIncomeInput" class="custom-num-input" placeholder="e.g. 3500.00" value="3200" step="50" />
+            <button class="apply-btn" id="applyCustomIncomeBtn">Set Custom</button>
+          </div>
+          <span style="font-size:11px;color:var(--faint)">Helpful if you have multiple income sources or start a new job.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       BILLS REVIEW & CADENCE SUBMENU MODAL
+       ======================================================================== -->
+  <div class="sheet-overlay" id="billsModal">
+    <div class="sheet-content">
+      <div class="sheet-handle-bar"></div>
+      <div class="sheet-header">
+        <div class="sheet-header-title">⚡ Bills & Commitments Review</div>
+        <button class="sheet-close-btn" id="closeBillsModalBtn">✕</button>
+      </div>
+      <div class="sheet-body">
+        <!-- Summary Strip -->
+        <div class="bills-summary-strip">
+          <div class="bills-summary-left">
+            <span class="bills-summary-label">Total Monthly Commitments</span>
+            <span class="bills-summary-amt" id="modalBillsTotalAmt">£1,450.00 / mo</span>
+          </div>
+          <div class="bills-summary-pct" id="modalBillsFloorBadge">45% Floor</div>
+        </div>
+
+        <div class="smart-detection-note">
+          <span class="icon">🤖</span>
+          <span>
+            <strong>Smart Continuation Monitoring:</strong> Eurof verifies each bill against your banking feed. You can toggle off any one-off charges or switch cadences (e.g. annual car insurance pro-rated monthly).
+          </span>
+        </div>
+
+        <!-- Bills List -->
+        <div class="bills-list" id="billsListContainer">
+          <!-- Dynamically populated from JS -->
+        </div>
+
+        <button class="add-custom-bill-btn" id="addCustomBillBtn">＋ Add Another Recurring Bill</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================================================
+    // STATE DATA
+    // ========================================================================
+
+    // Incomes Data Store
+    const RECENT_INCOMES = [
+      {
+        id: 'inc-1',
+        name: 'Acme Corp Ltd',
+        label: 'Monthly Net Salary',
+        amount: 3200.00,
+        date: '25 Oct 2026',
+        badge: 'Regular Salary',
+        badgeType: 'primary',
+        icon: '💼',
+        isDefault: true
+      },
+      {
+        id: 'inc-2',
+        name: 'Stripe Payments UK',
+        label: 'Freelance Client Payout',
+        amount: 850.00,
+        date: '18 Oct 2026',
+        badge: 'Variable Income',
+        badgeType: 'side',
+        icon: '💻',
+        isDefault: false
+      },
+      {
+        id: 'inc-3',
+        name: 'Acme Corp Ltd',
+        label: 'Previous Month Salary',
+        amount: 3200.00,
+        date: '25 Sep 2026',
+        badge: 'Past Payroll',
+        badgeType: 'past',
+        icon: '💼',
+        isDefault: false
+      },
+      {
+        id: 'inc-4',
+        name: 'HMRC UK Self Assessment',
+        label: 'Tax Rebate Refund',
+        amount: 180.00,
+        date: '12 Sep 2026',
+        badge: 'One-off Credit',
+        badgeType: 'past',
+        icon: '🏛️',
+        isDefault: false
+      }
+    ];
+
+    // Bills Data Store (with cadences: monthly, quarterly, yearly)
+    let BILLS_DATA = [
+      {
+        id: 'b-rent',
+        name: 'Mortgage / Rent (Barclays)',
+        category: 'Housing',
+        icon: '🏠',
+        rawAmount: 850.00,
+        cadence: 'monthly', // monthly | quarterly | yearly
+        status: 'verified', // verified | checking | oneoff
+        statusLabel: 'Active (Next 1 Nov)',
+        enabled: true
+      },
+      {
+        id: 'b-gas',
+        name: 'British Gas Dual Fuel',
+        category: 'Utilities',
+        icon: '⚡',
+        rawAmount: 125.00,
+        cadence: 'monthly',
+        status: 'verified',
+        statusLabel: 'Active (Next 28 Oct)',
+        enabled: true
+      },
+      {
+        id: 'b-council',
+        name: 'Westminster Council Tax',
+        category: 'Taxes',
+        icon: '🏛️',
+        rawAmount: 165.00,
+        cadence: 'monthly',
+        status: 'verified',
+        statusLabel: 'Active (Next 1 Nov)',
+        enabled: true
+      },
+      {
+        id: 'b-car-ins',
+        name: 'Admiral Car Insurance',
+        category: 'Motoring',
+        icon: '🚗',
+        rawAmount: 600.00,
+        cadence: 'yearly', // User pays £600 once a year -> £50/month
+        status: 'verified',
+        statusLabel: 'Annual (Next Oct 2027)',
+        enabled: true
+      },
+      {
+        id: 'b-water',
+        name: 'Thames Water',
+        category: 'Utilities',
+        icon: '💧',
+        rawAmount: 120.00,
+        cadence: 'quarterly', // User pays £120 every 3 months -> £40/month
+        status: 'verified',
+        statusLabel: 'Quarterly (Next Jan 2027)',
+        enabled: true
+      },
+      {
+        id: 'b-broadband',
+        name: 'Virgin Media Broadband',
+        category: 'Internet',
+        icon: '🌐',
+        rawAmount: 45.00,
+        cadence: 'monthly',
+        status: 'verified',
+        statusLabel: 'Active (Next 15 Nov)',
+        enabled: true
+      },
+      {
+        id: 'b-gym',
+        name: 'PureGym Membership',
+        category: 'Fitness',
+        icon: '🏋️',
+        rawAmount: 39.99,
+        cadence: 'monthly',
+        status: 'verified',
+        statusLabel: 'Active (Next 1 Nov)',
+        enabled: true
+      },
+      {
+        id: 'b-spotify',
+        name: 'Spotify Premium',
+        category: 'Subscription',
+        icon: '🎵',
+        rawAmount: 11.99,
+        cadence: 'monthly',
+        status: 'verified',
+        statusLabel: 'Active (Next 27 Oct)',
+        enabled: true
+      },
+      {
+        id: 'b-careplan',
+        name: 'Currys PC CarePlan',
+        category: 'Warranty',
+        icon: '💻',
+        rawAmount: 12.99,
+        cadence: 'monthly',
+        status: 'checking',
+        statusLabel: 'Verifying continuation (not seen 38d)',
+        enabled: false // initially excluded for review
+      },
+      {
+        id: 'b-hotel',
+        name: 'Premier Inn London',
+        category: 'Travel',
+        icon: '🏨',
+        rawAmount: 185.00,
+        cadence: 'monthly',
+        status: 'oneoff',
+        statusLabel: 'Detected one-off (Excluded)',
+        enabled: false
+      }
+    ];
+
+    // Core Active State
+    let selectedIncomeId = 'inc-1';
+    let currentIncome = 3200.00;
+    let incomeSourceLabel = 'Acme Corp (Salary)';
+
+    let spendPct = 70;
+    let savePct = 20;
+    let investPct = 10;
+    let softBlocked = false;
+
+    // Helper: calculate effective monthly pounds for a bill
+    function getBillMonthlyPounds(b) {
+      if (!b.enabled) return 0;
+      if (b.cadence === 'yearly') return b.rawAmount / 12;
+      if (b.cadence === 'quarterly') return b.rawAmount / 3;
+      return b.rawAmount;
+    }
+
+    // Calculate total bills commitment
+    function getTotalBillsMonthly() {
+      return BILLS_DATA.reduce((sum, b) => sum + getBillMonthlyPounds(b), 0);
+    }
+
+    function getBillsFloorPct() {
+      const totalBills = getTotalBillsMonthly();
+      const floor = Math.round((totalBills / Math.max(100, currentIncome)) * 100);
+      return Math.min(90, Math.max(10, floor));
+    }
+
+    // ========================================================================
+    // UI ELEMENTS
+    // ========================================================================
+    const heroIncomeAmt = document.getElementById('heroIncomeAmt');
+    const heroIncomeSubtext = document.getElementById('heroIncomeSubtext');
+    const heroBillsAmt = document.getElementById('heroBillsAmt');
+    const heroBillsSubtext = document.getElementById('heroBillsSubtext');
+    const heroFloorPct = document.getElementById('heroFloorPct');
+
+    const softBlockBanner = document.getElementById('softBlockBanner');
+    const blockedBillsAmt = document.getElementById('blockedBillsAmt');
+    const blockedBillsPct = document.getElementById('blockedBillsPct');
+
+    const trackContainer = document.getElementById('trackContainer');
+    const segBills = document.getElementById('segBills');
+    const segSpend = document.getElementById('segSpend');
+    const segSave = document.getElementById('segSave');
+    const segInvest = document.getElementById('segInvest');
+    const segBillsPct = document.getElementById('segBillsPct');
+    const segFreePct = document.getElementById('segFreePct');
+    const segSavePct = document.getElementById('segSavePct');
+    const segInvestPct = document.getElementById('segInvestPct');
+
+    const floorMarker = document.getElementById('floorMarker');
+    const thumbSpend = document.getElementById('thumbSpend');
+    const thumbSave = document.getElementById('thumbSave');
+    const ratioBadge = document.getElementById('ratioBadge');
+
+    // Modals
+    const incomeModal = document.getElementById('incomeModal');
+    const billsModal = document.getElementById('billsModal');
+    const openIncomeModalBtn = document.getElementById('openIncomeModalBtn');
+    const openBillsModalBtn = document.getElementById('openBillsModalBtn');
+    const closeIncomeModalBtn = document.getElementById('closeIncomeModalBtn');
+    const closeBillsModalBtn = document.getElementById('closeBillsModalBtn');
+
+    // Containers
+    const incomesListContainer = document.getElementById('incomesListContainer');
+    const billsListContainer = document.getElementById('billsListContainer');
+    const customIncomeInput = document.getElementById('customIncomeInput');
+    const applyCustomIncomeBtn = document.getElementById('applyCustomIncomeBtn');
+
+    const modalBillsTotalAmt = document.getElementById('modalBillsTotalAmt');
+    const modalBillsFloorBadge = document.getElementById('modalBillsFloorBadge');
+
+    // ========================================================================
+    // RENDER FUNCTIONS
+    // ========================================================================
+    function render() {
+      const billsTotal = getTotalBillsMonthly();
+      const billsFloor = getBillsFloorPct();
+      const activeBillsCount = BILLS_DATA.filter(b => b.enabled).length;
+
+      // Update Hero Card
+      heroIncomeAmt.innerText = '£' + currentIncome.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      heroIncomeSubtext.innerHTML = `<span class="dot"></span> ${incomeSourceLabel}`;
+
+      heroBillsAmt.innerText = '£' + billsTotal.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      heroBillsSubtext.innerHTML = `<span class="dot amber"></span> <span id="heroFloorPct">${billsFloor}</span>% floor • ${activeBillsCount} bills`;
+
+      // Soft Block Alert
+      if (softBlocked) {
+        softBlockBanner.classList.remove('hidden');
+        blockedBillsAmt.innerText = billsTotal.toLocaleString('en-GB', {maximumFractionDigits: 0});
+        blockedBillsPct.innerText = billsFloor;
+      } else {
+        softBlockBanner.classList.add('hidden');
+      }
+
+      // Track Segments
+      const discretionary = Math.max(0, spendPct - billsFloor);
+      segBills.style.width = billsFloor + '%';
+      segSpend.style.width = discretionary + '%';
+      segSave.style.width = savePct + '%';
+      segInvest.style.width = investPct + '%';
+
+      segBillsPct.innerText = billsFloor + '%';
+      segFreePct.innerText = Math.round(discretionary) + '%';
+      segSavePct.innerText = Math.round(savePct) + '%';
+      segInvestPct.innerText = Math.round(investPct) + '%';
+
+      // Thumbs & Marker Positions
+      floorMarker.style.left = billsFloor + '%';
+      thumbSpend.style.left = spendPct + '%';
+      thumbSave.style.left = (spendPct + savePct) + '%';
+
+      // Ratio Badge
+      ratioBadge.innerText = `${Math.round(spendPct)} / ${Math.round(savePct)} / ${Math.round(investPct)}`;
+      document.getElementById('spendPctBadge').innerText = Math.round(spendPct) + '%';
+      document.getElementById('savePctBadge').innerText = Math.round(savePct) + '%';
+      document.getElementById('investPctBadge').innerText = Math.round(investPct) + '%';
+
+      // Money Calculations
+      const spendPounds = (currentIncome * (spendPct / 100));
+      const billsPounds = billsTotal;
+      const freePounds = Math.max(0, spendPounds - billsPounds);
+      const savePounds = (currentIncome * (savePct / 100));
+      const investPounds = (currentIncome * (investPct / 100));
+
+      document.getElementById('spendTotalAmt').innerText = '£' + spendPounds.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      document.getElementById('dailySpendAllowance').innerText = '£' + (freePounds / 31).toFixed(2) + ' / day free spend';
+      document.getElementById('cardBillsSubAmt').innerText = '£' + billsPounds.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ` (${billsFloor}%)`;
+      document.getElementById('cardFreeSubAmt').innerText = '£' + freePounds.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ` (${Math.round(discretionary)}%)`;
+
+      document.getElementById('saveTotalAmt').innerText = '£' + savePounds.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      document.getElementById('saveDailyRate').innerText = '~£' + (savePounds / 31).toFixed(2) + ' / day allocated to stashes';
+
+      document.getElementById('investTotalAmt').innerText = '£' + investPounds.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+      // Update Modal Header Summary if open
+      modalBillsTotalAmt.innerText = '£' + billsTotal.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' / mo';
+      modalBillsFloorBadge.innerText = billsFloor + '% Floor';
+    }
+
+    // Populate Incomes List in Submenu
+    function renderIncomesList() {
+      incomesListContainer.innerHTML = '';
+      RECENT_INCOMES.forEach((inc) => {
+        const item = document.createElement('div');
+        item.className = 'income-item' + (selectedIncomeId === inc.id ? ' selected' : '');
+        item.innerHTML = `
+          <div class="income-item-left">
+            <div class="income-item-icon">${inc.icon}</div>
+            <div class="income-item-meta">
+              <span class="income-item-title">${inc.name}</span>
+              <div class="income-item-sub">
+                <span>${inc.date}</span>
+                <span class="income-badge ${inc.badgeType}">${inc.badge}</span>
+              </div>
+            </div>
+          </div>
+          <div class="income-item-right">
+            <span class="income-item-amt">£${inc.amount.toLocaleString('en-GB', {minimumFractionDigits: 2})}</span>
+            <div class="radio-circle"></div>
+          </div>
+        `;
+        item.addEventListener('click', () => {
+          selectedIncomeId = inc.id;
+          currentIncome = inc.amount;
+          incomeSourceLabel = inc.name + ' (' + inc.label.split(' ')[0] + ')';
+          renderIncomesList();
+          render();
+          setTimeout(() => closeSheet(incomeModal), 150);
+        });
+        incomesListContainer.appendChild(item);
+      });
+    }
+
+    // Populate Bills List in Submenu
+    function renderBillsList() {
+      billsListContainer.innerHTML = '';
+      BILLS_DATA.forEach((bill, idx) => {
+        const monthlyEq = getBillMonthlyPounds(bill);
+        const row = document.createElement('div');
+        row.className = 'bill-row' + (bill.enabled ? '' : ' excluded');
+
+        let cadenceLabel = 'monthly';
+        let rawCostLabel = `£${bill.rawAmount.toFixed(2)}/mo`;
+        if (bill.cadence === 'yearly') rawCostLabel = `£${bill.rawAmount.toFixed(2)}/yr → £${monthlyEq.toFixed(2)}/mo`;
+        if (bill.cadence === 'quarterly') rawCostLabel = `£${bill.rawAmount.toFixed(2)}/qtr → £${monthlyEq.toFixed(2)}/mo`;
+
+        let statusClass = 'verified';
+        let statusIcon = '●';
+        if (bill.status === 'checking') { statusClass = 'checking'; statusIcon = '◐'; }
+        if (bill.status === 'oneoff' || !bill.enabled) { statusClass = 'oneoff'; statusIcon = '✕'; }
+
+        row.innerHTML = `
+          <div class="bill-top">
+            <div class="bill-info-left">
+              <div class="bill-icon">${bill.icon}</div>
+              <div class="bill-name-col">
+                <span class="bill-name">${bill.name}</span>
+                <span class="bill-status-pill ${statusClass}">${statusIcon} ${bill.statusLabel}</span>
+              </div>
+            </div>
+            <div class="bill-right-group">
+              <div class="bill-money-col">
+                <span class="bill-effective-monthly">£${monthlyEq.toFixed(2)}</span>
+                <span class="bill-raw-cost">${rawCostLabel}</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" ${bill.enabled ? 'checked' : ''} onchange="toggleBill('${bill.id}', this.checked)">
+                <span class="slider-toggle"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Billing Cadence Selector Chips -->
+          <div class="cadence-bar">
+            <span class="cadence-label">Cycle:</span>
+            <button class="cadence-chip ${bill.cadence === 'monthly' ? 'active' : ''}" onclick="setBillCadence('${bill.id}', 'monthly')">Monthly</button>
+            <button class="cadence-chip ${bill.cadence === 'quarterly' ? 'active' : ''}" onclick="setBillCadence('${bill.id}', 'quarterly')">Quarterly (÷3)</button>
+            <button class="cadence-chip ${bill.cadence === 'yearly' ? 'active' : ''}" onclick="setBillCadence('${bill.id}', 'yearly')">Yearly (÷12)</button>
+          </div>
+        `;
+        billsListContainer.appendChild(row);
+      });
+    }
+
+    // Toggle bill on / off
+    window.toggleBill = function(id, isChecked) {
+      const b = BILLS_DATA.find(x => x.id === id);
+      if (b) {
+        b.enabled = isChecked;
+        if (!isChecked && b.status === 'verified') {
+          b.statusLabel = 'Excluded from commitments (one-off)';
+        } else if (isChecked && b.status === 'verified') {
+          b.statusLabel = 'Active (Verified)';
+        }
+        renderBillsList();
+        render();
+      }
+    };
+
+    // Set cadence
+    window.setBillCadence = function(id, newCadence) {
+      const b = BILLS_DATA.find(x => x.id === id);
+      if (b) {
+        b.cadence = newCadence;
+        renderBillsList();
+        render();
+      }
+    };
+
+    // Apply custom income input
+    applyCustomIncomeBtn.addEventListener('click', () => {
+      const val = parseFloat(customIncomeInput.value);
+      if (val && val >= 100) {
+        currentIncome = val;
+        selectedIncomeId = 'custom';
+        incomeSourceLabel = 'Custom Monthly Take-Home';
+        renderIncomesList();
+        render();
+        closeSheet(incomeModal);
+      } else {
+        alert('Please enter a valid monthly income greater than £100.');
+      }
+    });
+
+    // Add Custom Bill button
+    document.getElementById('addCustomBillBtn').addEventListener('click', () => {
+      const name = prompt('Enter bill or direct debit name (e.g. Car Finance):');
+      if (!name) return;
+      const amtStr = prompt('Enter bill amount in £ (e.g. 240):');
+      const amt = parseFloat(amtStr);
+      if (isNaN(amt) || amt <= 0) return;
+      const freq = prompt('Billing frequency: enter "monthly", "quarterly", or "yearly":', 'monthly');
+      const cadence = (freq && ['quarterly', 'yearly'].includes(freq.toLowerCase().trim())) ? freq.toLowerCase().trim() : 'monthly';
+
+      BILLS_DATA.push({
+        id: 'custom-' + Date.now(),
+        name: name.trim(),
+        category: 'Custom',
+        icon: '📋',
+        rawAmount: amt,
+        cadence: cadence,
+        status: 'verified',
+        statusLabel: 'Custom Commitment',
+        enabled: true
+      });
+      renderBillsList();
+      render();
+    });
+
+    // ========================================================================
+    // MODAL / SHEET OPEN & CLOSE
+    // ========================================================================
+    function openSheet(sheet) {
+      sheet.classList.add('active');
+    }
+
+    function closeSheet(sheet) {
+      sheet.classList.remove('active');
+    }
+
+    openIncomeModalBtn.addEventListener('click', () => {
+      renderIncomesList();
+      openSheet(incomeModal);
+    });
+
+    openBillsModalBtn.addEventListener('click', () => {
+      renderBillsList();
+      openSheet(billsModal);
+    });
+
+    closeIncomeModalBtn.addEventListener('click', () => closeSheet(incomeModal));
+    closeBillsModalBtn.addEventListener('click', () => closeSheet(billsModal));
+
+    // Close on backdrop tap
+    incomeModal.addEventListener('click', (e) => {
+      if (e.target === incomeModal) closeSheet(incomeModal);
+    });
+    billsModal.addEventListener('click', (e) => {
+      if (e.target === billsModal) closeSheet(billsModal);
+    });
+
+    // ========================================================================
+    // DRAGGABLE SLIDER PHYSICS & SOFT-BLOCK
+    // ========================================================================
+    let activeDrag = null;
+
+    function onPointerDown(e, handle) {
+      activeDrag = handle;
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    }
+
+    function onPointerMove(e) {
+      if (!activeDrag) return;
+      const rect = trackContainer.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      let pct = (x / rect.width) * 100;
+      const billsFloor = getBillsFloorPct();
+
+      if (activeDrag === 'spend') {
+        if (pct < billsFloor) {
+          softBlocked = true;
+          // Apply strong rubberband magnetic damping
+          const deficit = billsFloor - pct;
+          pct = billsFloor - (deficit * 0.15);
+        } else {
+          softBlocked = false;
+          pct = Math.min(92, pct);
+        }
+
+        const remaining = 100 - pct;
+        const sumRest = savePct + investPct;
+        savePct = (savePct / sumRest) * remaining;
+        investPct = remaining - savePct;
+        spendPct = pct;
+      } else if (activeDrag === 'save') {
+        const pool = 100 - spendPct;
+        let newSave = pct - spendPct;
+        newSave = Math.max(4, Math.min(pool - 4, newSave));
+        savePct = newSave;
+        investPct = pool - newSave;
+      }
+
+      render();
+    }
+
+    function onPointerUp() {
+      const billsFloor = getBillsFloorPct();
+      if (spendPct < billsFloor) {
+        // Snap back to bills floor
+        spendPct = billsFloor;
+        const remaining = 100 - spendPct;
+        const sumRest = savePct + investPct;
+        savePct = (savePct / sumRest) * remaining;
+        investPct = remaining - savePct;
+      }
+      softBlocked = false;
+      activeDrag = null;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      render();
+    }
+
+    thumbSpend.addEventListener('pointerdown', (e) => onPointerDown(e, 'spend'));
+    thumbSave.addEventListener('pointerdown', (e) => onPointerDown(e, 'save'));
+
+    window.applyPreset = function(s, sav, inv) {
+      const floor = getBillsFloorPct();
+      if (s < floor) {
+        alert(`Cannot apply ${s}% spend: your verified fixed bills require at least ${floor}%!`);
+        return;
+      }
+      spendPct = s;
+      savePct = sav;
+      investPct = inv;
+      softBlocked = false;
+      document.querySelectorAll('.preset-chip').forEach(el => el.classList.remove('active'));
+      event.target.classList.add('active');
+      render();
+    };
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      applyPreset(70, 20, 10);
+    });
+
+    // Initial setup
+    renderIncomesList();
+    renderBillsList();
+    render();
+  </script>
+</body>
+</html>

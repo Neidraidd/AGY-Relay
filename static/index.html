@@ -2225,7 +2225,7 @@
 
       <!-- Version Info Footer -->
       <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-3);background:rgba(0,0,0,0.2)">
-        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0029</span>
+        <span style="font-family:var(--font-mono);color:var(--text-2);font-weight:600">v202608.0030</span>
         <span style="background:rgba(210,153,34,0.15);color:var(--accent-warn);padding:1px 6px;border-radius:10px;font-size:9px;font-weight:600;border:1px solid rgba(210,153,34,0.3)">DEV</span>
       </div>
     </div>
@@ -3014,12 +3014,23 @@
     });
   }
 
-  // Global click delegate for all images in chat & history
+  // Global click delegate for all images and artifact links in chat & history
   document.addEventListener('click', (e) => {
     const img = e.target.closest('.chat-inline-image, .bubble.output img, .img-preview-chip img, .bubble img');
     if (img && img.src && !img.closest('#mockup-modal')) {
       e.stopPropagation();
       openMockupModal(img.src, 'Image Preview');
+      return;
+    }
+
+    const a = e.target.closest('a');
+    if (a && a.href && !a.closest('#mockup-modal') && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+      const href = a.getAttribute('href') || '';
+      if (href.startsWith('/artifact/') || href.includes('/artifact/')) {
+        e.preventDefault();
+        e.stopPropagation();
+        openMockupModal(a.href, a.textContent.trim() || 'Mockup Preview');
+      }
     }
   });
 

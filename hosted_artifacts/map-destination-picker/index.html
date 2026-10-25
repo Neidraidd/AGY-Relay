@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FoxUtils | Live Map Region &amp; Destination Picker Concept</title>
+    <link rel="icon" type="image/png" href="https://foxutils.app/favicon-32x32.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <style>
+        :root {
+            --picker-bg-base: #0c0e14;
+            --picker-bg-surface: #131722;
+            --picker-bg-card: rgba(23, 28, 42, 0.85);
+            --picker-bg-card-hover: rgba(30, 36, 54, 0.95);
+            --picker-border: rgba(255, 255, 255, 0.1);
+            --picker-border-accent: rgba(0, 210, 211, 0.4);
+            --picker-accent: #00d2d3;
+            --picker-accent-rgb: 0, 210, 211;
+            --picker-purple: #a55eea;
+            --picker-amber: #f39c12;
+            --picker-colonial: #2ed573;
+            --picker-colonial-rgb: 46, 213, 115;
+            --picker-warden: #54a0ff;
+            --picker-warden-rgb: 84, 160, 255;
+            --picker-danger: #ff4757;
+            --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-display: 'Chakra Petch', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body.mockup-body {
+            background-color: var(--picker-bg-base);
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(var(--picker-accent-rgb), 0.06) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(165, 94, 234, 0.05) 0%, transparent 40%),
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+            color: #e1e7f0;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            font-family: var(--font-primary);
+            overflow-x: hidden;
+        }
+
+        /* Top Concept Navigation Bar */
+        .concept-nav-header {
+            background: rgba(14, 17, 26, 0.95);
+            border-bottom: 1px solid var(--picker-border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 10000;
+            backdrop-filter: blur(16px);
+        }
+
+        .cnh-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .cnh-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(var(--picker-accent-rgb), 0.2), rgba(165, 94, 234, 0.2));
+            border: 1px solid var(--picker-border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--picker-accent);
+            font-size: 17px;
+        }
+
+        .cnh-title h1 {
+            margin: 0;
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cnh-title span {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.45);
+        }
+
+        .concept-mode-tabs {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--picker-border);
+            gap: 4px;
+        }
+
+        .cmt-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: rgba(255, 255, 255, 0.65);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+            font-family: var(--font-primary);
+        }
+
+        .cmt-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .cmt-btn.active {
+            background: linear-gradient(135deg, rgba(var(--picker-accent-rgb), 0.2), rgba(var(--picker-accent-rgb), 0.08));
+            border-color: var(--picker-border-accent);
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(var(--picker-accent-rgb), 0.15);
+        }
+
+        .cnh-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            border: 1px solid transparent;
+            font-family: var(--font-primary);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d2d3, #0097e6);
+            color: #000000;
+            font-weight: 700;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 16px rgba(0, 210, 211, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 11px;
+        }
+
+        /* Main Workspace Container */
+        .mockup-container {
+            flex: 1;
+            padding: 24px;
+            max-width: 1300px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Demo Concept 1: Planner Form with Map Trigger Button */
+        .planner-demo-card {
+            background: var(--picker-bg-card);
+            border: 1px solid var(--picker-border);
+            border-radius: 14px;
+            padding: 24px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .pdc-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .pdc-title h2 {
+            margin: 0;
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pdc-title p {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-grid-two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid-two-col { grid-template-columns: 1fr; }
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-field label {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-field label span.hint {
+            font-size: 11px;
+            font-weight: normal;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .input-with-button-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .mock-select-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid var(--picker-border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #ffffff;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s ease;
+            font-family: var(--font-primary);
+        }
+
+        .mock-select-input:focus {
+            border-color: var(--picker-accent);
+            box-shadow: 0 0 0 3px rgba(var(--picker-accent-rgb), 0.15);
+        }
+
+        .mock-select-input.highlighted {
+            border-color: var(--picker-accent);
+            background: rgba(var(--picker-accent-rgb), 0.12);
+            animation: highlightPulse 1.5s ease;
+        }
+
+        @keyframes highlightPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(var(--picker-accent-rgb), 0); }
+            50% { box-shadow: 0 0 16px 3px rgba(var(--picker-accent-rgb), 0.45); }
+        }
+
+        /* The Special "Select on Map" Button */
+        .btn-map-picker-trigger {
+            background: linear-gradient(135deg, rgba(var(--picker-accent-rgb), 0.18), rgba(165, 94, 234, 0.18));
+            border: 1px solid var(--picker-border-accent);
+            color: var(--picker-accent);
+            padding: 9px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            font-family: var(--font-primary);
+        }
+
+        .btn-map-picker-trigger:hover {
+            background: linear-gradient(135deg, rgba(var(--picker-accent-rgb), 0.35), rgba(165, 94, 234, 0.35));
+            color: #ffffff;
+            border-color: var(--picker-accent);
+            box-shadow: 0 0 16px rgba(var(--picker-accent-rgb), 0.35);
+            transform: translateY(-1px);
+        }
+
+        .btn-map-picker-trigger i {
+            font-size: 14px;
+            color: var(--picker-accent);
+        }
+
+        .btn-map-picker-trigger:hover i {
+            color: #ffffff;
+        }
+
+        /* Tactical Map Picker Modal (Full Featured Popover) */
+        .map-picker-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(4, 6, 10, 0.85);
+            backdrop-filter: blur(14px);
+            z-index: 200000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+
+        .map-picker-modal-overlay.hidden {
+            display: none !important;
+            opacity: 0;
+        }
+
+        .map-picker-window {
+            background: #0f131d;
+            border: 1px solid var(--picker-border-accent);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 1100px;
+            height: 85vh;
+            max-height: 800px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 32px rgba(var(--picker-accent-rgb), 0.12);
+            animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalScaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .mpw-header {
+            padding: 14px 20px;
+            background: rgba(18, 23, 35, 0.95);
+            border-bottom: 1px solid var(--picker-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .mpw-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mpw-title h3 {
+            margin: 0;
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        .mpw-title span {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.45);
+        }
+
+        .mpw-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .mpw-search {
+            position: relative;
+            min-width: 220px;
+        }
+
+        .mpw-search i {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.35);
+            font-size: 12px;
+        }
+
+        .mpw-search input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--picker-border);
+            border-radius: 6px;
+            padding: 7px 10px 7px 30px;
+            color: #ffffff;
+            font-size: 12px;
+            outline: none;
+            box-sizing: border-box;
+            font-family: var(--font-primary);
+        }
+
+        .mpw-search input:focus {
+            border-color: var(--picker-accent);
+        }
+
+        .mpw-filter-pills {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mpw-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--picker-border);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+            font-family: var(--font-primary);
+        }
+
+        .mpw-pill:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .mpw-pill.active {
+            background: rgba(var(--picker-accent-rgb), 0.2);
+            border-color: var(--picker-accent);
+            color: var(--picker-accent);
+        }
+
+        .btn-mpw-close {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-mpw-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        /* Map Body & Leaflet Viewport */
+        .mpw-body {
+            flex: 1;
+            position: relative;
+            background: #090b10;
+        }
+
+        #leaflet-picker-map {
+            width: 100%;
+            height: 100%;
+            background: #080a0f;
+        }
+
+        /* Floating Selection HUD Bar inside Map Window */
+        .mpw-selection-hud {
+            position: absolute;
+            bottom: 16px;
+            left: 20px;
+            right: 20px;
+            background: rgba(14, 18, 28, 0.94);
+            border: 1px solid var(--picker-border-accent);
+            border-radius: 12px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            z-index: 1000;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            transition: all 0.2s ease;
+        }
+
+        .msh-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .msh-target-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: rgba(var(--picker-accent-rgb), 0.15);
+            border: 1px solid var(--picker-border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--picker-accent);
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .msh-details h4 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .msh-details p {
+            margin: 2px 0 0;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .msh-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        /* Map Structure Pin / Marker Custom HTML */
+        .picker-structure-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            background: rgba(16, 20, 30, 0.95);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+            color: #ffffff;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .picker-structure-pin:hover, .picker-structure-pin.selected {
+            transform: scale(1.3);
+            border-color: var(--picker-accent);
+            background: var(--picker-accent);
+            color: #000000;
+            box-shadow: 0 0 18px var(--picker-accent);
+            z-index: 5000;
+        }
+
+        .picker-structure-pin.depot { border-color: #54a0ff; }
+        .picker-structure-pin.seaport { border-color: #00d2d3; }
+        .picker-structure-pin.factory { border-color: #f39c12; }
+        .picker-structure-pin.relic { border-color: #2ed573; }
+
+        /* Architectural Comparison Table */
+        .comparison-section {
+            background: var(--picker-bg-card);
+            border: 1px solid var(--picker-border);
+            border-radius: 14px;
+            padding: 24px;
+            backdrop-filter: blur(16px);
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid { grid-template-columns: 1fr; }
+        }
+
+        .comp-card {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--picker-border);
+            border-radius: 10px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .comp-card.recommended {
+            border-color: rgba(var(--picker-accent-rgb), 0.4);
+            background: linear-gradient(135deg, rgba(var(--picker-accent-rgb), 0.05), transparent);
+        }
+
+        .comp-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .comp-header h3 {
+            margin: 0;
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .comp-badge {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 12px;
+        }
+
+        .comp-badge.rec {
+            background: rgba(var(--picker-accent-rgb), 0.2);
+            color: var(--picker-accent);
+            border: 1px solid rgba(var(--picker-accent-rgb), 0.4);
+        }
+
+        .comp-badge.alt {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .comp-points {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .comp-points li {
+            margin-bottom: 6px;
+        }
+
+        .comp-points strong {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="mockup-body">
+
+    <!-- Top Concept Switcher Header -->
+    <header class="concept-nav-header">
+        <div class="cnh-brand">
+            <div class="cnh-icon"><i class="fa-solid fa-map-location-dot"></i></div>
+            <div class="cnh-title">
+                <h1>FOXUTILS <span>| Interactive Map Destination Picker Concept</span></h1>
+                <span>Spatial logistics targeting &amp; live region selector</span>
+            </div>
+        </div>
+
+        <div class="concept-mode-tabs">
+            <button type="button" class="cmt-btn active" onclick="switchConceptMode('modal', this)">
+                <i class="fa-solid fa-window-restore"></i> Popover Map Modal (Recommended)
+            </button>
+            <button type="button" class="cmt-btn" onclick="switchConceptMode('split', this)">
+                <i class="fa-solid fa-table-columns"></i> Split-View Layout
+            </button>
+            <button type="button" class="cmt-btn" onclick="switchConceptMode('analysis', this)">
+                <i class="fa-solid fa-scale-balanced"></i> Architectural Analysis
+            </button>
+        </div>
+
+        <div class="cnh-actions">
+            <a href="https://foxutils.app" target="_blank" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open FoxUtils</a>
+        </div>
+    </header>
+
+    <!-- Main Mockup Container -->
+    <main class="mockup-container">
+
+        <!-- SECTION 1: INTERACTIVE PLANNER FORM WITH TRIGGER BUTTON -->
+        <div class="planner-demo-card" id="demo-planner-card">
+            <div class="pdc-header">
+                <div class="pdc-title">
+                    <h2><i class="fa-solid fa-boxes-packing" style="color:var(--picker-accent)"></i> Requisition &amp; Delivery Planner Simulation</h2>
+                    <p>Experience how players select destinations: use the classic dropdown, or click <strong>"Select on Map"</strong> to pick visually.</p>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="resetDemoForm()"><i class="fa-solid fa-rotate-left"></i> Reset Form</button>
+                </div>
+            </div>
+
+            <div class="form-grid-two-col">
+                <div class="form-field">
+                    <label>Fulfilling Regiment <span class="hint">who delivers</span></label>
+                    <select class="mock-select-input">
+                        <option>FEARS (Warden) — Backline Logistics</option>
+                        <option>3IRD (Warden) — Artillery &amp; Supply</option>
+                        <option>ColTest (Colonial) — Frontline Support</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Priority Level</label>
+                    <select class="mock-select-input">
+                        <option>🔴 High Priority (Immediate Dispatch)</option>
+                        <option selected>🟡 Medium Priority (Standard Restock)</option>
+                        <option>🟢 Low Priority (Surplus Storage)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-grid-two-col">
+                <!-- THE TARGET DESTINATION FIELD WITH MAP BUTTON -->
+                <div class="form-field">
+                    <label>
+                        <span>Destination Zone / Town</span>
+                        <span class="hint">controlled territory</span>
+                    </label>
+                    <div class="input-with-button-wrap">
+                        <input type="text" class="mock-select-input" id="demo-destination-input" value="Brodytown - Drowned Vale" readonly>
+                        <button type="button" class="btn-map-picker-trigger" onclick="openMapPickerModal()">
+                            <i class="fa-solid fa-map-location-dot"></i> Select on Map
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Destination Location Type <span class="hint">depots &amp; seaports only</span></label>
+                    <select class="mock-select-input" id="demo-structure-input">
+                        <option value="Storage Depot">Storage Depot</option>
+                        <option value="Seaport">Seaport</option>
+                        <option value="Town Hall / Relic">Town Hall / Relic Base</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:16px; margin-top:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span class="msh-target-icon" id="form-preview-icon"><i class="fa-solid fa-warehouse"></i></span>
+                        <div>
+                            <div style="font-weight:700; color:#ffffff; font-size:13px;" id="form-preview-title">Brodytown (Storage Depot) — Drowned Vale</div>
+                            <div style="font-size:11px; color:rgba(255,255,255,0.4);" id="form-preview-sub">Hex: Drowned Vale • Direct road connection from Callahan's Passage</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="submitSimulatedRequisition()">
+                        <i class="fa-solid fa-check"></i> Submit Delivery Requisition
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: ARCHITECTURAL COMPARISON & DEEP DIVE -->
+        <div class="comparison-section" id="comparison-card">
+            <div class="pdc-title">
+                <h2><i class="fa-solid fa-scale-balanced" style="color:var(--picker-accent)"></i> Architectural Decision: Modal Popover vs. Main Map</h2>
+                <p>Detailed analysis of why a dedicated popover map provides the cleanest UX for players.</p>
+            </div>
+
+            <div class="comparison-grid">
+                <!-- Option A: Modal Drawer (Recommended) -->
+                <div class="comp-card recommended">
+                    <div class="comp-header">
+                        <h3><i class="fa-solid fa-window-restore" style="color:var(--picker-accent)"></i> Approach A: Tactical Map Picker Modal</h3>
+                        <span class="comp-badge rec">Recommended</span>
+                    </div>
+                    <ul class="comp-points">
+                        <li><strong>Preserves Planning Context:</strong> The player's active form (items in cart, batch sizes, priority, notes) stays completely intact with zero risk of state loss.</li>
+                        <li><strong>Instant Speed:</strong> Opens immediately right over the active modal, lets the player zoom to a region with 1 click, choose a depot, and confirms straight back into the field.</li>
+                        <li><strong>Focused Filter Set:</strong> Can be pre-filtered to only show valid delivery destinations (e.g. only friendly-held hexes with Storage Depots/Seaports).</li>
+                        <li><strong>Universal Reusability:</strong> Can be plugged into <em>any</em> feature in FoxUtils: Requisitions, Run Starter, Route Builder, Operations, Squad Intel.</li>
+                    </ul>
+                </div>
+
+                <!-- Option B: Main Map Pin Drop -->
+                <div class="comp-card">
+                    <div class="comp-header">
+                        <h3><i class="fa-solid fa-map" style="color:#a55eea"></i> Approach B: In-Context Main Map HUD Mode</h3>
+                        <span class="comp-badge alt">Alternative</span>
+                    </div>
+                    <ul class="comp-points">
+                        <li><strong>Full Map Context:</strong> Uses the existing full-screen map, allowing the player to look at public stockpile intel and supply tunnels.</li>
+                        <li><strong>Disorienting Screen Shifts:</strong> Requires collapsing/minimizing the planner modal into a floating bottom HUD, navigating to the map tab, and expanding it back upon selection.</li>
+                        <li><strong>Mobile Complexity:</strong> Floating HUDs over a full-screen mobile Leaflet map create tight touch targets and gesture conflicts.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- THE TACTICAL MAP PICKER MODAL (INTERACTIVE LEAFLET POPUP) -->
+    <div id="map-picker-overlay" class="map-picker-modal-overlay hidden">
+        <div class="map-picker-window">
+            <div class="mpw-header">
+                <div class="mpw-title">
+                    <div class="cnh-icon" style="width:28px;height:28px;font-size:13px;"><i class="fa-solid fa-crosshairs"></i></div>
+                    <div>
+                        <h3>Select Destination Location</h3>
+                        <span>Click any friendly Zone, Town, Storage Depot, or Seaport</span>
+                    </div>
+                </div>
+
+                <div class="mpw-controls">
+                    <div class="mpw-search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="map-picker-search" placeholder="Search zone or hex..." oninput="onMapPickerSearch(this.value)">
+                    </div>
+
+                    <div class="mpw-filter-pills">
+                        <button type="button" class="mpw-pill active" id="pill-all" onclick="setMapPickerFilter('all', this)"><i class="fa-solid fa-globe"></i> All</button>
+                        <button type="button" class="mpw-pill" id="pill-depots" onclick="setMapPickerFilter('depots', this)"><i class="fa-solid fa-warehouse"></i> Depots</button>
+                        <button type="button" class="mpw-pill" id="pill-seaports" onclick="setMapPickerFilter('seaports', this)"><i class="fa-solid fa-anchor"></i> Seaports</button>
+                    </div>
+
+                    <button type="button" class="btn-mpw-close" onclick="closeMapPickerModal()" title="Close"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+
+            <!-- Leaflet Map Canvas -->
+            <div class="mpw-body">
+                <div id="leaflet-picker-map"></div>
+
+                <!-- Bottom Floating Selection HUD -->
+                <div class="mpw-selection-hud" id="picker-selection-hud">
+                    <div class="msh-left">
+                        <div class="msh-target-icon" id="hud-icon"><i class="fa-solid fa-location-crosshairs"></i></div>
+                        <div class="msh-details">
+                            <h4 id="hud-target-name">Brodytown (Storage Depot)</h4>
+                            <p id="hud-target-sub">Drowned Vale • Faction: Warden Controlled • Road Connection</p>
+                        </div>
+                    </div>
+                    <div class="msh-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="closeMapPickerModal()">Cancel</button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="confirmMapPickerSelection()">
+                            <i class="fa-solid fa-check"></i> Use This Destination
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <script>
+        // Foxhole Hex Grid Geometry
+        const ORIGIN = { x: 128, y: -128 };
+        const HEX_WIDTH = 25.52;
+        const HEX_HEIGHT = HEX_WIDTH * Math.sqrt(3) / 2;
+        const w = HEX_WIDTH;
+        const k = HEX_HEIGHT;
+        const o = ORIGIN;
+
+        const FOXHOLE_REGIONS = [
+            { id: 3, name: "Deadlands", center: [o.y, o.x] },
+            { id: 4, name: "Callahan's Passage", center: [o.y + 1 * k, o.x] },
+            { id: 5, name: "Marban Hollow", center: [o.y + 0.5 * k, o.x + 0.75 * w] },
+            { id: 6, name: "Umbral Wildwood", center: [o.y - 1 * k, o.x] },
+            { id: 7, name: "The Moors", center: [o.y + 1.5 * k, o.x - 0.75 * w] },
+            { id: 8, name: "The Heartlands", center: [o.y - 1.5 * k, o.x - 0.75 * w] },
+            { id: 9, name: "Loch Mór", center: [o.y - 0.5 * k, o.x - 0.75 * w] },
+            { id: 10, name: "Linn of Duncan", center: [o.y + 0.5 * k, o.x - 0.75 * w] },
+            { id: 11, name: "Reaching Trail", center: [o.y + 2 * k, o.x] },
+            { id: 12, name: "Drowned Vale", center: [o.y - 0.5 * k, o.x + 0.75 * w] },
+            { id: 13, name: "Shackled Chasm", center: [o.y - 1.5 * k, o.x + 0.75 * w] },
+            { id: 14, name: "Viper Pit", center: [o.y + 1 * k, o.x + 1.5 * w] },
+            { id: 15, name: "Weathered Expanse", center: [o.y + 1.5 * k, o.x + 0.75 * w] },
+            { id: 16, name: "Endless Shore", center: [o.y, o.x + 1.5 * w] },
+            { id: 17, name: "Allod's Bight", center: [o.y - 1 * k, o.x + 1.5 * w] },
+            { id: 18, name: "Clanshead Valley", center: [o.y + 1 * k, o.x + 2.25 * w] },
+            { id: 19, name: "Morgens Crossing", center: [o.y + 1.5 * k, o.x + 2.25 * w] },
+            { id: 20, name: "Stlican Shelf", center: [o.y + 2 * k, o.x + 1.5 * w] },
+            { id: 21, name: "Terminus", center: [o.y - 2 * k, o.x + 0.75 * w] },
+            { id: 22, name: "Sableport", center: [o.y - 1 * k, o.x - 1.5 * w] },
+            { id: 23, name: "Westgate", center: [o.y - 1.5 * k, o.x - 2.25 * w] },
+            { id: 24, name: "Farranac Coast", center: [o.y, o.x - 1.5 * w] }
+        ];
+
+        function regionHexPolygon(center, scale = 0.94) {
+            const [cy, cx] = center;
+            const r = (HEX_WIDTH / Math.sqrt(3)) * scale;
+            const points = [];
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 180) * (60 * i);
+                points.push([cy + r * Math.sin(angle), cx + r * Math.cos(angle)]);
+            }
+            return points;
+        }
+
+        // Interactive Map Picker Logic
+        let pickerMap = null;
+        let pickerMarkersLayer = null;
+        let pickerHexesLayer = null;
+        let selectedTarget = {
+            zoneName: 'Brodytown',
+            hexName: 'Drowned Vale',
+            structureType: 'Storage Depot',
+            icon: 'fa-warehouse'
+        };
+
+        const SAMPLE_DESTINATIONS = [
+            { zoneName: "Brodytown", hexName: "Drowned Vale", type: "Storage Depot", icon: "fa-warehouse", lat: -128, lng: 148, faction: "warden" },
+            { zoneName: "Saltbrook Channel", hexName: "Endless Shore", type: "Seaport", icon: "fa-anchor", lat: -128, lng: 168, faction: "warden" },
+            { zoneName: "The King", hexName: "Clanshead Valley", type: "Storage Depot", icon: "fa-warehouse", lat: -106, lng: 184, faction: "warden" },
+            { zoneName: "Kirknell", hexName: "Viper Pit", type: "Storage Depot", icon: "fa-warehouse", lat: -106, lng: 166, faction: "warden" },
+            { zoneName: "Cuttail Station", hexName: "Reaching Trail", type: "Storage Depot", icon: "fa-warehouse", lat: -84, lng: 128, faction: "warden" },
+            { zoneName: "Port of Rime", hexName: "Stlican Shelf", type: "Seaport", icon: "fa-anchor", lat: -84, lng: 168, faction: "warden" },
+            { zoneName: "Therízo", hexName: "Terminus", type: "Seaport", icon: "fa-anchor", lat: -172, lng: 148, faction: "colonial" },
+            { zoneName: "Sableport Relic", hexName: "Sableport", type: "Town Hall / Relic", icon: "fa-landmark", lat: -150, lng: 90, faction: "colonial" },
+            { zoneName: "The Blemish", hexName: "The Heartlands", type: "Storage Depot", icon: "fa-warehouse", lat: -160, lng: 108, faction: "colonial" },
+            { zoneName: "Feirmor", hexName: "Loch Mór", type: "Storage Depot", icon: "fa-warehouse", lat: -138, lng: 108, faction: "colonial" }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateFormPreview();
+        });
+
+        function openMapPickerModal() {
+            const overlay = document.getElementById('map-picker-overlay');
+            overlay.classList.remove('hidden');
+
+            if (!pickerMap) {
+                setTimeout(initPickerMap, 50);
+            } else {
+                setTimeout(() => {
+                    pickerMap.invalidateSize();
+                }, 50);
+            }
+        }
+
+        function closeMapPickerModal() {
+            document.getElementById('map-picker-overlay').classList.add('hidden');
+        }
+
+        function initPickerMap() {
+            pickerMap = L.map('leaflet-picker-map', {
+                crs: L.CRS.Simple,
+                zoomControl: false,
+                attributionControl: false,
+                minZoom: 1,
+                maxZoom: 7,
+                zoomSnap: 0.5,
+                wheelPxPerZoomLevel: 120,
+                maxBounds: [[-256, -50], [0, 306]],
+                maxBoundsViscosity: 1.0
+            });
+
+            pickerMap.setView([-128, 140], 3);
+            L.control.zoom({ position: 'bottomright' }).addTo(pickerMap);
+
+            L.tileLayer('https://foxutils.app/tiles/{z}/{z}_{x}_{y}.png', {
+                minZoom: 1,
+                maxZoom: 7,
+                maxNativeZoom: 6,
+                noWrap: true,
+                bounds: [[-256, 0], [0, 256]],
+                keepBuffer: 2
+            }).addTo(pickerMap);
+
+            pickerHexesLayer = L.layerGroup().addTo(pickerMap);
+            pickerMarkersLayer = L.layerGroup().addTo(pickerMap);
+
+            FOXHOLE_REGIONS.forEach(region => {
+                const isWarden = region.name.includes('Clanshead') || region.name.includes('Drowned') || region.name.includes('Viper') || region.name.includes('Passage') || region.name.includes('Reaching') || region.name.includes('Moors') || region.name.includes('Stlican') || region.name.includes('Endless');
+                const polygon = L.polygon(regionHexPolygon(region.center, 0.94), {
+                    color: isWarden ? 'rgba(84, 160, 255, 0.4)' : 'rgba(46, 213, 115, 0.4)',
+                    fillColor: isWarden ? 'rgba(84, 160, 255, 0.12)' : 'rgba(46, 213, 115, 0.08)',
+                    fillOpacity: 1,
+                    weight: 2
+                }).addTo(pickerHexesLayer);
+
+                polygon.on('click', () => {
+                    pickerMap.flyToBounds(polygon.getBounds(), { padding: [20, 20], duration: 0.5 });
+                });
+            });
+
+            renderDestinationMarkers();
+        }
+
+        function renderDestinationMarkers(filter = 'all', searchQuery = '') {
+            if (!pickerMarkersLayer) return;
+            pickerMarkersLayer.clearLayers();
+
+            const q = searchQuery.toLowerCase().trim();
+
+            SAMPLE_DESTINATIONS.forEach(dest => {
+                if (filter === 'depots' && dest.type !== 'Storage Depot') return;
+                if (filter === 'seaports' && dest.type !== 'Seaport') return;
+                if (q && !dest.zoneName.toLowerCase().includes(q) && !dest.hexName.toLowerCase().includes(q)) return;
+
+                const isSelected = selectedTarget.zoneName === dest.zoneName && selectedTarget.structureType === dest.type;
+                const typeClass = dest.type === 'Storage Depot' ? 'depot' : (dest.type === 'Seaport' ? 'seaport' : 'relic');
+
+                const iconHtml = L.divIcon({
+                    className: 'custom-picker-icon-wrapper',
+                    html: `
+                        <div class="picker-structure-pin ${typeClass} ${isSelected ? 'selected' : ''}" title="${dest.zoneName} (${dest.type})">
+                            <i class="fa-solid ${dest.icon}"></i>
+                        </div>
+                    `,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+
+                const marker = L.marker([dest.lat, dest.lng], { icon: iconHtml }).addTo(pickerMarkersLayer);
+
+                marker.on('click', () => {
+                    selectDestinationTarget(dest);
+                });
+            });
+        }
+
+        function selectDestinationTarget(dest) {
+            selectedTarget = {
+                zoneName: dest.zoneName,
+                hexName: dest.hexName,
+                structureType: dest.type,
+                icon: dest.icon
+            };
+
+            document.getElementById('hud-target-name').textContent = `${dest.zoneName} (${dest.type})`;
+            document.getElementById('hud-target-sub').textContent = `${dest.hexName} • Faction: ${dest.faction.toUpperCase()} • Road Connection`;
+            document.getElementById('hud-icon').innerHTML = `<i class="fa-solid ${dest.icon}"></i>`;
+
+            renderDestinationMarkers();
+        }
+
+        function confirmMapPickerSelection() {
+            document.getElementById('demo-destination-input').value = `${selectedTarget.zoneName} - ${selectedTarget.hexName}`;
+            document.getElementById('demo-structure-input').value = selectedTarget.structureType;
+
+            const input = document.getElementById('demo-destination-input');
+            input.classList.remove('highlighted');
+            void input.offsetWidth;
+            input.classList.add('highlighted');
+
+            updateFormPreview();
+            closeMapPickerModal();
+        }
+
+        function updateFormPreview() {
+            document.getElementById('form-preview-title').textContent = `${selectedTarget.zoneName} (${selectedTarget.structureType}) — ${selectedTarget.hexName}`;
+            document.getElementById('form-preview-sub').textContent = `Hex: ${selectedTarget.hexName} • Direct tactical delivery route mapped`;
+            document.getElementById('form-preview-icon').innerHTML = `<i class="fa-solid ${selectedTarget.icon || 'fa-warehouse'}"></i>`;
+        }
+
+        function onMapPickerSearch(val) {
+            renderDestinationMarkers('all', val);
+        }
+
+        function setMapPickerFilter(filter, btn) {
+            document.querySelectorAll('.mpw-pill').forEach(p => p.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderDestinationMarkers(filter);
+        }
+
+        function switchConceptMode(mode, btn) {
+            document.querySelectorAll('.cmt-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            if (mode === 'modal') {
+                document.getElementById('demo-planner-card').scrollIntoView({ behavior: 'smooth' });
+                openMapPickerModal();
+            } else if (mode === 'analysis') {
+                document.getElementById('comparison-card').scrollIntoView({ behavior: 'smooth' });
+            } else if (mode === 'split') {
+                alert('Split-View Mode: On widescreen displays, the map picker can also dock side-by-side with the active planner!');
+            }
+        }
+
+        function resetDemoForm() {
+            selectedTarget = {
+                zoneName: 'Brodytown',
+                hexName: 'Drowned Vale',
+                structureType: 'Storage Depot',
+                icon: 'fa-warehouse'
+            };
+            confirmMapPickerSelection();
+        }
+
+        function submitSimulatedRequisition() {
+            alert(`🎉 Requisition Submitted for delivery to ${selectedTarget.zoneName} (${selectedTarget.structureType}) in ${selectedTarget.hexName}!`);
+        }
+    </script>
+</body>
+</html>
