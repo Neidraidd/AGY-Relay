@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Eurof &ndash; Stage Completions, 60/20/20 Budget &amp; Clean Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090e;
+      --canvas: #0c1017;
+      --surface: #141b27;
+      --surface-raised: #1c2536;
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --border-subtle: rgba(255, 255, 255, 0.05);
+      --lime: #bef264;
+      --lime-soft: rgba(190, 242, 100, 0.14);
+      --amber: #fbbf24;
+      --amber-soft: rgba(251, 191, 36, 0.14);
+      --sky: #38bdf8;
+      --sky-soft: rgba(56, 189, 248, 0.14);
+      --coral: #ff5c5c;
+      --coral-soft: rgba(255, 92, 92, 0.15);
+      --emerald: #34d399;
+      --emerald-soft: rgba(52, 211, 153, 0.14);
+      --purple: #a78bfa;
+      --purple-soft: rgba(167, 139, 250, 0.14);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --faint: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Simulation Control Toolbar */
+    .sim-toolbar {
+      width: 100%;
+      max-width: 480px;
+      background: rgba(12, 16, 23, 0.96);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 12px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toolbar-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--lime);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .toolbar-title span {
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: none;
+    }
+
+    .stage-chips {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+    }
+
+    .stage-chip {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      color: var(--muted);
+      padding: 6px 2px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .stage-chip:hover {
+      background: var(--surface-raised);
+      color: var(--text);
+    }
+
+    .stage-chip.active {
+      background: var(--lime);
+      color: #07090e;
+      border-color: var(--lime);
+      font-weight: 800;
+    }
+
+    /* View Mode Tabs */
+    .view-tabs {
+      display: flex;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 2px;
+    }
+
+    .view-tab {
+      flex: 1;
+      text-align: center;
+      padding: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .view-tab.active {
+      background: var(--surface-raised);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* Phone Shell */
+    .phone-canvas {
+      width: 100%;
+      max-width: 480px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+    }
+
+    /* Top Bar */
+    .screen-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0 8px 0;
+    }
+
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 18px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      border: 1px solid var(--surface-border);
+    }
+
+    .screen-titles {
+      flex: 1;
+      padding-left: 12px;
+    }
+
+    .screen-titles h1 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .screen-titles p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    /* Quick Action Strip */
+    .top-action-strip {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .strip-stage-tag {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .strip-stage-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .edit-pill-btn {
+      background: var(--surface-raised);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--lime);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: transform 0.15s ease;
+    }
+
+    .edit-pill-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* Celebration Card */
+    .celebration-card {
+      background: linear-gradient(145deg, #121e1e 0%, #0d1717 100%);
+      border: 1.5px solid var(--emerald);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 6px 20px rgba(52, 211, 153, 0.12);
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .celebration-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .celebration-icon {
+      font-size: 28px;
+    }
+
+    .celebration-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--emerald);
+    }
+
+    .celebration-sub {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .celebration-body {
+      font-size: 13px;
+      line-height: 1.45;
+      color: #e2e8f0;
+    }
+
+    .action-btn {
+      background: var(--emerald);
+      color: #051410;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .action-btn:hover {
+      filter: brightness(1.1);
+    }
+
+    .action-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Hero Goal Card */
+    .hero-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .eyebrow {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .goal-heading {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--text);
+    }
+
+    .progress-box {
+      background: var(--surface-raised);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .progress-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .progress-target {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .progress-bar-track {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+      background: var(--lime);
+    }
+
+    .timeline-estimate {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Active Split Card */
+    .split-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .split-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .split-meter {
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .split-seg {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+
+    .seg-spend { background: var(--coral); }
+    .seg-save { background: var(--sky); }
+    .seg-invest { background: var(--emerald); }
+
+    .split-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 4px;
+    }
+
+    /* Roadmap Checklist */
+    .roadmap-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .milestone-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .milestone-item:last-child {
+      border-bottom: none;
+    }
+
+    .milestone-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .milestone-badge.done {
+      background: var(--emerald);
+      color: #07090e;
+    }
+
+    .milestone-badge.current {
+      background: var(--lime);
+      color: #07090e;
+    }
+
+    .milestone-badge.locked {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--muted);
+    }
+
+    .milestone-content {
+      flex: 1;
+    }
+
+    .milestone-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .milestone-desc {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .milestone-status {
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status-done { color: var(--emerald); }
+    .status-current { color: var(--lime); }
+    .status-locked { color: var(--faint); }
+
+    /* Investing Card */
+    .invest-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .invest-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--emerald);
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .invest-body {
+      font-size: 12px;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+
+    .invest-stashes-box {
+      background: var(--surface-raised);
+      padding: 10px 12px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .invest-stashes-box span {
+      color: var(--emerald);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Single Budget Front Card */
+    .wallet-card {
+      background: var(--lime);
+      color: #07090e;
+      border-radius: 24px;
+      padding: 22px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(190, 242, 100, 0.25);
+      position: relative;
+    }
+
+    .wallet-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .wallet-logo {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
+    .wallet-tag {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      opacity: 0.8;
+    }
+
+    .wallet-amount {
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .wallet-amount small {
+      font-size: 22px;
+      font-weight: 700;
+      opacity: 0.8;
+    }
+
+    .wallet-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      opacity: 0.85;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+      padding-top: 12px;
+    }
+
+    .quiet-stage-strip {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 12px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .quiet-stage-badge {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #07090e;
+    }
+
+    .quiet-stage-desc {
+      font-size: 12px;
+      font-weight: 700;
+      color: #07090e;
+    }
+
+    .single-budget-panel {
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .single-budget-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      opacity: 0.9;
+    }
+
+    .single-split-track {
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .single-split-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .single-split-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .cell-label {
+      font-size: 10px;
+      font-weight: 700;
+      opacity: 0.75;
+    }
+
+    .cell-val {
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    /* Edit Parameters Sheet Modal */
+    .sheet-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 300;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .sheet-overlay.open {
+      display: flex;
+    }
+
+    .sheet-container {
+      width: 100%;
+      max-width: 480px;
+      background: var(--canvas);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--surface-border);
+      border-bottom: none;
+      animation: slideUp 0.25s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .sheet-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--surface-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sheet-title {
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .sheet-done {
+      color: var(--lime);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .sheet-body {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .sheet-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sheet-group-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .sheet-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .sheet-row {
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+    }
+
+    .sheet-row:last-child {
+      border-bottom: none;
+    }
+
+    .radio-circle {
+      width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      border: 2px solid var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .radio-circle.checked {
+      border-color: var(--lime);
+    }
+
+    .radio-circle.checked::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 5px;
+      background: var(--lime);
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stepper-btn {
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .stepper-val {
+      min-width: 65px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    /* Switch Component */
+    .switch-toggle {
+      width: 44px;
+      height: 24px;
+      border-radius: 12px;
+      background: var(--surface-raised);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .switch-toggle.on {
+      background: var(--lime);
+    }
+
+    .switch-knob {
+      width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      background: #ffffff;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s ease;
+    }
+
+    .switch-toggle.on .switch-knob {
+      transform: translateX(20px);
+      background: #07090e;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Simulator Toolbar -->
+  <div class="sim-toolbar">
+    <div class="toolbar-title">
+      Eurof Journey Preview <span>Target: 60/20/20 Builder</span>
+    </div>
+    <div class="stage-chips">
+      <div class="stage-chip" onclick="setStage(0)" id="chip-0">Stage 0</div>
+      <div class="stage-chip" onclick="setStage(1)" id="chip-1">Stage 1</div>
+      <div class="stage-chip" onclick="setStage(2)" id="chip-2">Stage 2</div>
+      <div class="stage-chip active" onclick="setStage(3)" id="chip-3">Stage 3 ★</div>
+      <div class="stage-chip" onclick="setStage(4)" id="chip-4">Stage 4 💎</div>
+    </div>
+    <div class="view-tabs">
+      <div class="view-tab active" onclick="setView('journey')" id="tab-journey">Clean Journey View</div>
+      <div class="view-tab" onclick="setView('home')" id="tab-home">Home Card (Single Budget)</div>
+    </div>
+  </div>
+
+  <!-- Main Phone Screen Canvas -->
+  <div class="phone-canvas">
+
+    <!-- VIEW 1: CLEAN JOURNEY VIEW -->
+    <div id="view-journey-wrap" style="display: flex; flex-direction: column; gap: 14px;">
+      
+      <!-- Top Title Header -->
+      <div class="screen-header">
+        <div class="back-btn">‹</div>
+        <div class="screen-titles">
+          <h1>Ramp-up journey</h1>
+          <p id="journey-subtitle">Moving you safely to your 60/20/20 budget</p>
+        </div>
+      </div>
+
+      <!-- Quick Action Strip -->
+      <div class="top-action-strip">
+        <div>
+          <div class="strip-stage-tag" id="strip-stage-tag">STAGE 3 OF 4</div>
+          <div class="strip-stage-title" id="strip-stage-title">1-Month essentials fund</div>
+        </div>
+        <div class="edit-pill-btn" onclick="openEditModal()">
+          <span>⚙️</span> Edit parameters
+        </div>
+      </div>
+
+      <!-- Celebration Card (When Stage Complete) -->
+      <div class="celebration-card" id="celebration-card">
+        <div class="celebration-header">
+          <div class="celebration-icon">🎉</div>
+          <div>
+            <div class="celebration-title" id="celebration-title">Stage 3 Complete: 1-Month Cushion Funded!</div>
+            <div class="celebration-sub">Verified from real stashes &amp; accounts</div>
+          </div>
+        </div>
+        <div class="celebration-body" id="celebration-body">
+          You have saved £2,816.00 in stashes, fully surpassing your £2,247.00 target. High-interest debt is zero.
+        </div>
+        <button class="action-btn" id="graduate-btn" onclick="triggerGraduate()">
+          <span>🎓</span> Graduate to 60 / 20 / 20 Builder
+        </button>
+      </div>
+
+      <!-- Hero What You Are Achieving Card -->
+      <div class="hero-card">
+        <div class="eyebrow">WHAT YOU ARE ACHIEVING</div>
+        <div class="goal-heading" id="goal-heading">
+          Fund 1 full month of essential living (£2,247.00) covering scheduled bills and groceries.
+        </div>
+
+        <div class="progress-box">
+          <div class="progress-row">
+            <span class="progress-val mono" id="progress-saved">£2,816.00 saved</span>
+            <span class="progress-target mono" id="progress-target">Target: £2,247.00</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-fill" style="width: 100%;"></div>
+          </div>
+          <div class="timeline-estimate">
+            <span>⏱️</span>
+            <span class="mono" id="timeline-text">Target achieved · Ready to graduate</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Payday Split Card -->
+      <div class="split-card">
+        <div class="eyebrow">HOW YOUR PAY DIVIDES AT THIS STAGE</div>
+        <h3 id="split-headline">Step 3: 1-Month Essentials Reserve</h3>
+
+        <div class="split-meter">
+          <div class="split-seg seg-spend" id="meter-spend" style="width: 70%;"></div>
+          <div class="split-seg seg-save" id="meter-save" style="width: 30%;"></div>
+          <div class="split-seg seg-invest" id="meter-invest" style="width: 0%;"></div>
+        </div>
+
+        <div class="split-legend">
+          <div class="legend-item">
+            <div class="legend-dot seg-spend"></div>
+            <span id="legend-spend">70% Spend &amp; Bills</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot seg-save"></div>
+            <span id="legend-save">30% 1-Mo Emergency Fund</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot seg-invest"></div>
+            <span id="legend-invest">0% Invest (paused)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Raw Essentials Target Card -->
+      <div class="hero-card">
+        <div class="eyebrow">1-MONTH ESSENTIALS TARGET</div>
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--muted);">Committed regular bills</span>
+            <span class="mono" style="font-weight: 700;">£1,747.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--muted);">Essential subsistence allowance</span>
+            <span class="mono" style="font-weight: 700;">£500.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--surface-border);">
+            <span style="font-weight: 700;">Total 1-month safety fund</span>
+            <span class="mono" style="font-weight: 800; color: var(--lime);">£2,247.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--muted);">Recognised emergency savings</span>
+            <span class="mono" style="font-weight: 800; color: var(--emerald);">£2,816.00 (Funded)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Roadmap Checklist -->
+      <div class="roadmap-card">
+        <div class="eyebrow">JOURNEY ROADMAP</div>
+        <div class="milestone-item">
+          <div class="milestone-badge done">✓</div>
+          <div class="milestone-content">
+            <div class="milestone-title">Break-Even Survival</div>
+            <div class="milestone-desc">Positive cash flow to payday</div>
+          </div>
+          <div class="milestone-status status-done">Completed</div>
+        </div>
+        <div class="milestone-item">
+          <div class="milestone-badge done">✓</div>
+          <div class="milestone-content">
+            <div class="milestone-title">£500 Starter Buffer</div>
+            <div class="milestone-desc">Emergency cash cushion locked</div>
+          </div>
+          <div class="milestone-status status-done">Completed</div>
+        </div>
+        <div class="milestone-item">
+          <div class="milestone-badge done">✓</div>
+          <div class="milestone-content">
+            <div class="milestone-title">Avalanche Debt Clearance</div>
+            <div class="milestone-desc">Zero high-interest credit card debt</div>
+          </div>
+          <div class="milestone-status status-done">Completed</div>
+        </div>
+        <div class="milestone-item">
+          <div class="milestone-badge current" id="badge-stage3">★</div>
+          <div class="milestone-content">
+            <div class="milestone-title">1-Month Essentials Fund</div>
+            <div class="milestone-desc">Full month cushion (£2,247.00)</div>
+          </div>
+          <div class="milestone-status status-current" id="status-stage3">Ready to graduate!</div>
+        </div>
+        <div class="milestone-item">
+          <div class="milestone-badge locked" id="badge-stage4">4</div>
+          <div class="milestone-content">
+            <div class="milestone-title">60 / 20 / 20 Builder Budget</div>
+            <div class="milestone-desc">20% automated into investing</div>
+          </div>
+          <div class="milestone-status status-locked" id="status-stage4">Unlocks next</div>
+        </div>
+      </div>
+
+      <!-- Investing System Integration -->
+      <div class="invest-card">
+        <div class="invest-header">
+          <span>📈</span> Investing System Integration
+        </div>
+        <div class="invest-body" id="invest-body">
+          Investing is paused during Stage 3 so every surplus pound funds your cash shield. Once graduated to Stage 4, 20% of your income (£500.00/mo) flows automatically into your investment stashes.
+        </div>
+        <div class="invest-stashes-box">
+          <div id="invest-status-text">1 investment stash active · £400.00 invested</div>
+          <span>View stashes ›</span>
+        </div>
+      </div>
+
+      <!-- Bottom Customize Button -->
+      <button class="action-btn" style="background: var(--surface-raised); color: var(--text); border: 1px solid var(--surface-border);" onclick="openEditModal()">
+        <span>⚙️</span> Customize journey parameters
+      </button>
+
+    </div>
+
+    <!-- VIEW 2: HOME CARD (SINGLE BUDGET MODE) -->
+    <div id="view-home-wrap" style="display: none; flex-direction: column; gap: 14px;">
+      
+      <div style="font-size: 13px; color: var(--muted); padding-bottom: 4px;">
+        When in Stage 4, Eurof provides pure single-budget clarity without persistent nag banners:
+      </div>
+
+      <!-- Front Wallet Card -->
+      <div class="wallet-card">
+        <div class="wallet-top">
+          <div>
+            <div class="wallet-logo">eurof</div>
+            <div class="wallet-tag">FREE TO SPEND</div>
+          </div>
+          <div class="wallet-amount mono">
+            £1,452<small>.33</small>
+          </div>
+        </div>
+
+        <div class="wallet-meta">
+          <div>📅 £48.41/day • 30d to 28 Nov</div>
+          <div class="mono">£4,271 cash</div>
+        </div>
+
+        <!-- Quiet Stage Strip (Can be hidden or shown) -->
+        <div class="quiet-stage-strip" id="home-stage-strip">
+          <div>
+            <div class="quiet-stage-badge">💎 STAGE 4 · 60/20/20</div>
+            <div class="quiet-stage-desc">Sustainable 60/20/20 wealth system active</div>
+          </div>
+          <div style="font-weight: 800; font-size: 16px;">›</div>
+        </div>
+
+        <!-- Single Budget Panel -->
+        <div class="single-budget-panel">
+          <div class="single-budget-title">28 OCT &ndash; 28 NOV (30D LEFT)</div>
+          
+          <div class="single-split-track">
+            <div style="flex: 60; background: var(--coral);"></div>
+            <div style="flex: 20; background: var(--amber);"></div>
+            <div style="flex: 20; background: var(--sky);"></div>
+            <div style="flex: 20; background: var(--emerald);"></div>
+          </div>
+
+          <div class="single-split-grid">
+            <div class="single-split-cell">
+              <span class="cell-label">SPEND (60%)</span>
+              <span class="cell-val mono">£1,452.33</span>
+            </div>
+            <div class="single-split-cell">
+              <span class="cell-label">BILLS</span>
+              <span class="cell-val mono">£1,747.00</span>
+            </div>
+            <div class="single-split-cell">
+              <span class="cell-label">STASHES (20%)</span>
+              <span class="cell-val mono">£500.00</span>
+            </div>
+            <div class="single-split-cell">
+              <span class="cell-label">INVEST (20%)</span>
+              <span class="cell-val mono">£500.00</span>
+            </div>
+            <div class="single-split-cell">
+              <span class="cell-label">CREDIT</span>
+              <span class="cell-val mono">£27.44 (Covered)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Single Budget Mode Toggle -->
+      <div class="hero-card">
+        <div class="eyebrow">HOME CARD PREFERENCE</div>
+        <div style="font-size: 13px; color: var(--muted); line-height: 1.45;">
+          You have graduated! You can toggle off the ramp-up banner to enjoy a clean, single-budget dashboard.
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--surface-border);">
+          <span style="font-size: 13px; font-weight: 700;">Show ramp-up badge on Home card</span>
+          <div class="switch-toggle on" id="home-switch" onclick="toggleHomeStrip()">
+            <div class="switch-knob"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Edit Parameters Sheet Modal -->
+  <div class="sheet-overlay" id="edit-sheet-overlay" onclick="closeEditModal(event)">
+    <div class="sheet-container" onclick="event.stopPropagation()">
+      <div class="sheet-header">
+        <div class="sheet-title">Journey Parameters</div>
+        <div class="sheet-done" onclick="closeEditModal()">Done</div>
+      </div>
+      <div class="sheet-body">
+        
+        <!-- Primary Focus -->
+        <div class="sheet-group">
+          <div class="sheet-group-title">Primary Financial Focus</div>
+          <div class="sheet-card">
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Everyday banking &amp; spending</div>
+                <div style="font-size: 11px; color: var(--muted);">Clean daily allowance without debt pressure</div>
+              </div>
+              <div class="radio-circle"></div>
+            </div>
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Reducing credit debt &amp; interest</div>
+                <div style="font-size: 11px; color: var(--muted);">Avalanche payoff priority</div>
+              </div>
+              <div class="radio-circle"></div>
+            </div>
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Building savings &amp; emergency buffer</div>
+                <div style="font-size: 11px; color: var(--muted);">Fund starter buffer and 1-month cushion</div>
+              </div>
+              <div class="radio-circle checked"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1-Month Cushion Scope -->
+        <div class="sheet-group">
+          <div class="sheet-group-title">1-Month Safety Cushion Scope</div>
+          <div class="sheet-card">
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Bills and living essentials</div>
+                <div style="font-size: 11px; color: var(--muted);">£1,747 bills + £500 subsistence (£2,247 target)</div>
+              </div>
+              <div class="radio-circle checked"></div>
+            </div>
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Committed bills only</div>
+                <div style="font-size: 11px; color: var(--muted);">£1,747 scheduled bills and housing only</div>
+              </div>
+              <div class="radio-circle"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stepper Adjustments -->
+        <div class="sheet-group">
+          <div class="sheet-group-title">Target Adjustments</div>
+          <div class="sheet-card">
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Starter buffer target</div>
+                <div style="font-size: 11px; color: var(--muted);">Liquid cash shield</div>
+              </div>
+              <div class="stepper">
+                <div class="stepper-btn">-£50</div>
+                <div class="stepper-val mono">£500</div>
+                <div class="stepper-btn">+£50</div>
+              </div>
+            </div>
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Essential subsistence</div>
+                <div style="font-size: 11px; color: var(--muted);">Food, travel &amp; pharmacy</div>
+              </div>
+              <div class="stepper">
+                <div class="stepper-btn">-£50</div>
+                <div class="stepper-val mono">£500</div>
+                <div class="stepper-btn">+£50</div>
+              </div>
+            </div>
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Debt paydown surplus</div>
+                <div style="font-size: 11px; color: var(--muted);">Monthly accelerated paydown</div>
+              </div>
+              <div class="stepper">
+                <div class="stepper-btn">-£50</div>
+                <div class="stepper-val mono">£250</div>
+                <div class="stepper-btn">+£50</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Emergency Stash Source -->
+        <div class="sheet-group">
+          <div class="sheet-group-title">Emergency Fund Savings Source</div>
+          <div class="sheet-card">
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">All stashes &amp; savings accounts</div>
+                <div style="font-size: 11px; color: var(--muted);">£2,816.00 total saved across all pots</div>
+              </div>
+              <div class="radio-circle checked"></div>
+            </div>
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Savings stash only</div>
+                <div style="font-size: 11px; color: var(--muted);">£1,139.00 allocated</div>
+              </div>
+              <div class="radio-circle"></div>
+            </div>
+            <div class="sheet-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 700;">Holiday stash only</div>
+                <div style="font-size: 11px; color: var(--muted);">£1,277.00 allocated</div>
+              </div>
+              <div class="radio-circle"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STAGES = {
+      0: {
+        num: 0,
+        tag: 'STAGE 0 OF 4',
+        title: 'Break-even survival',
+        goal: 'Survive to payday without dipping into overdraft.',
+        saved: 'Safe daily limit: £14.00/day',
+        target: 'Survival target: £0 deficit',
+        fill: '20%',
+        timeline: '1 to 2 paydays with strict discipline',
+        headline: 'Step 0: Break-Even Survival',
+        spendPct: 100, savePct: 0, investPct: 0,
+        spendLabel: '100% Living & Bills', saveLabel: '0% Save (paused)', investLabel: '0% Invest (paused)',
+        isComplete: false,
+        celebration: null,
+      },
+      1: {
+        num: 1,
+        tag: 'STAGE 1 OF 4',
+        title: 'Starter emergency buffer',
+        goal: 'Build a £500.00 cash buffer against unexpected shocks.',
+        saved: '£200.00 saved',
+        target: 'Target: £500.00',
+        fill: '40%',
+        timeline: '1 payday remaining at £300/mo',
+        headline: 'Step 1: Build Starter Buffer',
+        spendPct: 70, savePct: 30, investPct: 0,
+        spendLabel: '70% Spend & Bills', saveLabel: '30% Starter Buffer', investLabel: '0% Invest (paused)',
+        isComplete: false,
+        celebration: null,
+      },
+      2: {
+        num: 2,
+        tag: 'STAGE 2 OF 4',
+        title: 'Crushing expensive credit',
+        goal: 'Crush revolving high-interest cards with Avalanche while keeping spend earmarked.',
+        saved: '£680.00 revolving debt',
+        target: '3 paydays to zero',
+        fill: '55%',
+        timeline: '3 paydays remaining at £250/mo surplus',
+        headline: 'Step 2: Avalanche Debt Payoff',
+        spendPct: 70, savePct: 0, investPct: 30,
+        spendLabel: '70% Spend & Bills', saveLabel: '0% Save (paused)', investLabel: '30% Debt Avalanche',
+        isComplete: false,
+        celebration: null,
+      },
+      3: {
+        num: 3,
+        tag: 'STAGE 3 OF 4',
+        title: '1-Month essentials fund',
+        goal: 'Fund 1 full month of essential living (£2,247.00) covering scheduled bills and groceries.',
+        saved: '£2,816.00 saved',
+        target: 'Target: £2,247.00 (Funded)',
+        fill: '100%',
+        timeline: 'Target achieved · Ready to graduate',
+        headline: 'Step 3: 1-Month Essentials Reserve',
+        spendPct: 70, savePct: 30, investPct: 0,
+        spendLabel: '70% Spend & Bills', saveLabel: '30% 1-Mo Emergency Fund', investLabel: '0% Invest (paused)',
+        isComplete: true,
+        celebration: {
+          title: 'Stage 3 Complete: 1-Month Cushion Funded!',
+          body: 'You have saved £2,816.00 in stashes, fully surpassing your £2,247.00 target. High-interest debt is zero. You are fully protected from financial emergencies.',
+          btn: '🎓 Graduate to 60 / 20 / 20 Builder',
+        },
+      },
+      4: {
+        num: 4,
+        tag: 'STAGE 4 OF 4',
+        title: 'Sustainable 60/20/20 Wealth',
+        goal: 'Operate permanently on your chosen 60% Spend, 20% Save, 20% Invest wealth plan.',
+        saved: '£2,816.00 saved',
+        target: 'Target: £2,247.00 (Funded)',
+        fill: '100%',
+        timeline: 'Autopilot active · All stages completed',
+        headline: 'Step 4: Sustainable 60/20/20 Wealth',
+        spendPct: 60, savePct: 20, investPct: 20,
+        spendLabel: '60% Spend & Bills', saveLabel: '20% Stashes (Savings)', investLabel: '20% Long-Term Investing',
+        isComplete: true,
+        celebration: {
+          title: '🏆 Stage 4: Wealth Autopilot Active!',
+          body: 'Congratulations! All stages completed. Your chosen 60/20/20 Builder plan is running with 20% (£500/mo) automated into long-term investing.',
+          btn: '✓ 60/20/20 Plan Active',
+        },
+      },
+    };
+
+    let currentStage = 3;
+
+    function setStage(stageNum) {
+      currentStage = stageNum;
+      document.querySelectorAll('.stage-chip').forEach((c, idx) => {
+        c.classList.toggle('active', idx === stageNum);
+      });
+
+      const s = STAGES[stageNum];
+      document.getElementById('strip-stage-tag').innerText = s.tag;
+      document.getElementById('strip-stage-title').innerText = s.title;
+      document.getElementById('goal-heading').innerText = s.goal;
+      document.getElementById('progress-saved').innerText = s.saved;
+      document.getElementById('progress-target').innerText = s.target;
+      document.getElementById('progress-fill').style.width = s.fill;
+      document.getElementById('timeline-text').innerText = s.timeline;
+      document.getElementById('split-headline').innerText = s.headline;
+
+      // Meter
+      document.getElementById('meter-spend').style.width = s.spendPct + '%';
+      document.getElementById('meter-save').style.width = s.savePct + '%';
+      document.getElementById('meter-invest').style.width = s.investPct + '%';
+
+      document.getElementById('legend-spend').innerText = s.spendLabel;
+      document.getElementById('legend-save').innerText = s.saveLabel;
+      document.getElementById('legend-invest').innerText = s.investLabel;
+
+      // Celebration
+      const celCard = document.getElementById('celebration-card');
+      if (s.isComplete && s.celebration) {
+        celCard.style.display = 'flex';
+        document.getElementById('celebration-title').innerText = s.celebration.title;
+        document.getElementById('celebration-body').innerText = s.celebration.body;
+        document.getElementById('graduate-btn').innerText = s.celebration.btn;
+      } else {
+        celCard.style.display = 'none';
+      }
+
+      // Checklist update
+      const b3 = document.getElementById('badge-stage3');
+      const s3 = document.getElementById('status-stage3');
+      const b4 = document.getElementById('badge-stage4');
+      const s4 = document.getElementById('status-stage4');
+
+      if (stageNum === 4) {
+        b3.innerText = '✓';
+        b3.className = 'milestone-badge done';
+        s3.innerText = 'Completed';
+        s3.className = 'milestone-status status-done';
+
+        b4.innerText = '★';
+        b4.className = 'milestone-badge current';
+        s4.innerText = 'Active Plan';
+        s4.className = 'milestone-status status-current';
+      } else {
+        b3.innerText = '★';
+        b3.className = 'milestone-badge current';
+        s3.innerText = 'Ready to graduate!';
+        s3.className = 'milestone-status status-current';
+
+        b4.innerText = '4';
+        b4.className = 'milestone-badge locked';
+        s4.innerText = 'Unlocks next';
+        s4.className = 'milestone-status status-locked';
+      }
+    }
+
+    function triggerGraduate() {
+      if (currentStage === 3) {
+        setStage(4);
+      }
+    }
+
+    function setView(viewName) {
+      document.getElementById('tab-journey').classList.toggle('active', viewName === 'journey');
+      document.getElementById('tab-home').classList.toggle('active', viewName === 'home');
+      document.getElementById('view-journey-wrap').style.display = viewName === 'journey' ? 'flex' : 'none';
+      document.getElementById('view-home-wrap').style.display = viewName === 'home' ? 'flex' : 'none';
+    }
+
+    function openEditModal() {
+      document.getElementById('edit-sheet-overlay').classList.add('open');
+    }
+
+    function closeEditModal(e) {
+      document.getElementById('edit-sheet-overlay').classList.remove('open');
+    }
+
+    function toggleHomeStrip() {
+      const sw = document.getElementById('home-switch');
+      const strip = document.getElementById('home-stage-strip');
+      sw.classList.toggle('on');
+      strip.style.display = sw.classList.contains('on') ? 'flex' : 'none';
+    }
+  </script>
+</body>
+</html>
